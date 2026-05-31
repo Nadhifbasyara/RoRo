@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "128289448920",
+    "project_id": "roro-90c6b",
+    "storage_bucket": "roro-90c6b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128289448920:android:372856553c3a62071d88ad",
+        "android_client_info": {
+          "package_name": "com.example.roro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA8ypBCXX-v7wzKTHmsucD9YUSpBG54w4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

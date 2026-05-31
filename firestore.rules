@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isRollatorCodeValid(code) {
+      return code is string && code.size() >= 6 && code.size() <= 128;
+    }
+
+    function linkedAccountIdsValid() {
+      return request.resource.data.linkedAccountIds is list
+        && request.resource.data.linkedAccountIds.size() <= 2;
+    }
+
+    function rollatorCreateIsValid() {
+      return isAuthenticated()
+        && request.resource.data.keys().hasOnly(['code', 'label', 'linkedAccountIds', 'createdAt', 'updatedAt'])
+        && isRollatorCodeValid(request.resource.data.code)
+        && request.resource.data.code == request.resource.id
+        && (!('label' in request.resource.data) || request.resource.data.label is string)
+        && linkedAccountIdsValid()
+        && request.resource.data.linkedAccountIds.size() == 0;
+    }
+
+    function rollatorUpdateIsValid() {
+      return isAuthenticated()
+        && request.resource.data.keys().hasOnly(['code', 'label', 'linkedAccountIds', 'createdAt', 'updatedAt'])
+        && request.resource.data.code == resource.data.code
+        && isRollatorCodeValid(request.resource.data.code)
+        && (!('label' in request.resource.data) || request.resource.data.label is string)
+        && linkedAccountIdsValid()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.linkedAccountIds.hasAll(resource.data.linkedAccountIds)
+        && (
+          request.resource.data.linkedAccountIds == resource.data.linkedAccountIds
+          || (
+            request.resource.data.linkedAccountIds.size() == resource.data.linkedAccountIds.size() + 1
+            && request.resource.data.linkedAccountIds.size() <= 2
+            && request.resource.data.linkedAccountIds.hasAny([request.auth.uid])
+            && !resource.data.linkedAccountIds.hasAny([request.auth.uid])
+          )
+        );
+    }
+
+    match /dashboard/{documentId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /rollators/{rollatorId} {
+      allow read: if isAuthenticated();
+      allow create: if rollatorCreateIsValid();
+      allow update: if rollatorUpdateIsValid();
+      allow delete: if false;
+    }
+  }
+}
