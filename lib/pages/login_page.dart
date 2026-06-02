@@ -1,7 +1,11 @@
 part of roro_main;
 
 class LoginPage extends StatelessWidget {
-  const LoginPage({super.key, required this.distanceRepository, required this.rollatorRepository});
+  const LoginPage({
+    super.key,
+    required this.distanceRepository,
+    required this.rollatorRepository,
+  });
 
   final DistanceRepository distanceRepository;
   final RollatorRepository rollatorRepository;
@@ -31,7 +35,10 @@ class LoginPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEAF1FF),
                     borderRadius: BorderRadius.circular(999),
@@ -51,10 +58,10 @@ class LoginPage extends StatelessWidget {
                       Text(
                         'SECURE ACCESS',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: const Color(0xFF0F4FDB),
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
-                            ),
+                          color: const Color(0xFF0F4FDB),
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
                       ),
                     ],
                   ),
@@ -63,25 +70,25 @@ class LoginPage extends StatelessWidget {
                 Text(
                   'Welcome back to\nRoRo',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1.2,
-                        height: 1.02,
-                        color: const Color(0xFF101828),
-                      ),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.2,
+                    height: 1.02,
+                    color: const Color(0xFF101828),
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   'Log in to monitor your patient\nand manage robotic care.',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF475467),
-                        height: 1.45,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    color: const Color(0xFF475467),
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 28),
                 _DeviceLoginCard(
-                  onScanFromGallery: () => _showJoinRollatorDialog(context),
-                  onDeviceTap: () => _scanAndJoinRollator(context),
+                  onScanFromGallery: () => _scanAndOpenProvisioning(context),
+                  onDeviceTap: () => _scanAndOpenProvisioning(context),
                 ),
                 const SizedBox(height: 22),
                 Center(
@@ -91,15 +98,19 @@ class LoginPage extends StatelessWidget {
                       Text(
                         "Don't have an account? ",
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF475467),
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: const Color(0xFF475467),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       GestureDetector(
-                        onTap: () => _showInfo(context, 'Sign Up feature belum dihubungkan.'),
+                        onTap: () => _showInfo(
+                          context,
+                          'Sign Up feature belum dihubungkan.',
+                        ),
                         child: Text(
                           'Sign Up',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
                                 color: const Color(0xFF0F4FDB),
                                 fontWeight: FontWeight.w900,
                               ),
@@ -111,13 +122,13 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 30),
                 Center(
                   child: Text(
-                    '© 2024 RORO MEDICAL ROBOTICS • ALL RIGHTS\nRESERVED',
+                    '┬⌐ 2024 RORO MEDICAL ROBOTICS ΓÇó ALL RIGHTS\nRESERVED',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFF98A2B3),
-                          letterSpacing: 2.1,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: const Color(0xFF98A2B3),
+                      letterSpacing: 2.1,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -140,10 +151,12 @@ class LoginPage extends StatelessWidget {
   }
 
   void _showInfo(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _scanAndJoinRollator(BuildContext context) async {
+  Future<void> _scanAndOpenProvisioning(BuildContext context) async {
     final scannedCode = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -155,19 +168,21 @@ class LoginPage extends StatelessWidget {
       return;
     }
 
-    final result = await rollatorRepository.claimCurrentUserToRollator(scannedCode.trim());
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => FirmwareProvisioningPage(
+          rollatorRepository: rollatorRepository,
+          initialRollatorCode: scannedCode.trim(),
+        ),
+      ),
+    );
+
     if (!context.mounted) {
       return;
     }
 
-    if (result.success) {
-      await RollatorSessionStore.saveRollatorCode(result.rollator?.code ?? scannedCode.trim());
-      if (!context.mounted) {
-        return;
-      }
+    if (result == true) {
       _goToDashboard(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
     }
   }
 }
@@ -195,14 +210,18 @@ class _CreateRollatorSheetState extends State<_CreateRollatorSheet> {
     setState(() => _isLoading = true);
     try {
       final created = await widget.rollatorRepository.createRollator(
-        label: _labelController.text.trim().isEmpty ? null : _labelController.text.trim(),
+        label: _labelController.text.trim().isEmpty
+            ? null
+            : _labelController.text.trim(),
       );
       if (!mounted) return;
       Navigator.of(context).pop(created);
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -210,19 +229,37 @@ class _CreateRollatorSheetState extends State<_CreateRollatorSheet> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 8,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create Rollator QR', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+              Text(
+                'Create Rollator QR',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
               const SizedBox(height: 8),
-              Text('The generated Firestore document ID will become the QR payload.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF667085))),
+              Text(
+                'The generated Firestore document ID will become the QR payload.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: const Color(0xFF667085)),
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: _labelController,
-                decoration: const InputDecoration(labelText: 'Label (optional)', hintText: 'Example: Rollator A'),
+                decoration: const InputDecoration(
+                  labelText: 'Label (optional)',
+                  hintText: 'Example: Rollator A',
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -231,7 +268,11 @@ class _CreateRollatorSheetState extends State<_CreateRollatorSheet> {
                 child: FilledButton(
                   onPressed: _isLoading ? null : _submit,
                   child: _isLoading
-                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Create QR'),
                 ),
               ),
@@ -240,7 +281,9 @@ class _CreateRollatorSheetState extends State<_CreateRollatorSheet> {
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton(
-                  onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                  onPressed: _isLoading
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: const Text('Cancel'),
                 ),
               ),
@@ -274,12 +317,15 @@ class _JoinRollatorDialogState extends State<_JoinRollatorDialog> {
   Future<void> _submit() async {
     final code = _controller.text.trim();
     if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Masukkan rollator code dulu.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan rollator code dulu.')),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
-    final claimResult = await widget.rollatorRepository.claimCurrentUserToRollator(code);
+    final claimResult = await widget.rollatorRepository
+        .claimCurrentUserToRollator(code);
     if (!mounted) return;
     Navigator.of(context).pop(claimResult);
   }
@@ -294,15 +340,35 @@ class _JoinRollatorDialogState extends State<_JoinRollatorDialog> {
           TextField(
             controller: _controller,
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(labelText: 'Rollator Code', hintText: 'Paste QR payload here'),
+            decoration: const InputDecoration(
+              labelText: 'Rollator Code',
+              hintText: 'Paste QR payload here',
+            ),
           ),
           const SizedBox(height: 8),
-          Text('A rollator can only be linked to 2 accounts.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF667085))),
+          Text(
+            'A rollator can only be linked to 2 accounts.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: const Color(0xFF667085)),
+          ),
         ],
       ),
       actions: [
-        TextButton(onPressed: _isLoading ? null : () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        FilledButton(onPressed: _isLoading ? null : _submit, child: _isLoading ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Join')),
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Join'),
+        ),
       ],
     );
   }
@@ -328,16 +394,20 @@ class _LoginTopBar extends StatelessWidget {
                 color: colorScheme.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.spa_rounded, color: colorScheme.primary, size: 18),
+              child: Icon(
+                Icons.spa_rounded,
+                color: colorScheme.primary,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Text(
               'RoRo',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
-                  ),
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
+              ),
             ),
           ],
         ),
@@ -352,7 +422,10 @@ class _LoginTopBar extends StatelessWidget {
 }
 
 class _DeviceLoginCard extends StatelessWidget {
-  const _DeviceLoginCard({required this.onScanFromGallery, required this.onDeviceTap});
+  const _DeviceLoginCard({
+    required this.onScanFromGallery,
+    required this.onDeviceTap,
+  });
 
   final VoidCallback onScanFromGallery;
   final VoidCallback onDeviceTap;
@@ -380,17 +453,17 @@ class _DeviceLoginCard extends StatelessWidget {
             Text(
               'Device Login',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF101828),
-                  ),
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF101828),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               'Scan QR Code on Device',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF667085),
-                    fontWeight: FontWeight.w500,
-                  ),
+                color: const Color(0xFF667085),
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 18),
             _QrScannerMock(onTap: onDeviceTap),
@@ -426,16 +499,20 @@ class _DeviceLoginCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: Color(0xFFB54708), size: 18),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: Color(0xFFB54708),
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Ensure the QR code is centered and well-lit for faster recognition.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFFB54708),
-                            fontWeight: FontWeight.w600,
-                            height: 1.35,
-                          ),
+                        color: const Color(0xFFB54708),
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
                     ),
                   ),
                 ],
@@ -459,49 +536,88 @@ extension on LoginPage {
       ),
       builder: (sheetContext) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Rollator Options',
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Create a new rollator QR or join an existing one with its code.',
-                  style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(color: const Color(0xFF667085)),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF0F4FDB)),
-                  title: const Text('Create Rollator QR'),
-                  subtitle: const Text('Generate a unique QR code from Firestore'),
-                  onTap: () async {
-                    // await closing the sheet and give a short delay to ensure
-                    // the framework removes dependents before opening a new route.
-                    await Navigator.of(sheetContext).maybePop();
-                    await Future<void>.delayed(const Duration(milliseconds: 200));
-                    if (context.mounted) {
-                      _showCreateRollatorBottomSheet(context);
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.login_rounded, color: Color(0xFF0F4FDB)),
-                  title: const Text('Join Rollator'),
-                  subtitle: const Text('Claim a rollator using the QR code'),
-                  onTap: () async {
-                    await Navigator.of(sheetContext).maybePop();
-                    await Future<void>.delayed(const Duration(milliseconds: 200));
-                    if (context.mounted) {
-                      _showJoinRollatorDialog(context);
-                    }
-                  },
-                ),
-              ],
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Rollator Options',
+                    style: Theme.of(sheetContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create a new rollator QR, join an existing one, or start firmware provisioning.',
+                    style: Theme.of(sheetContext).textTheme.bodyMedium
+                        ?.copyWith(color: const Color(0xFF667085)),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.qr_code_2_rounded,
+                      color: Color(0xFF0F4FDB),
+                    ),
+                    title: const Text('Create Rollator QR'),
+                    subtitle: const Text(
+                      'Generate a unique QR code from Firestore',
+                    ),
+                    onTap: () async {
+                      await Navigator.of(sheetContext).maybePop();
+                      await Future<void>.delayed(
+                        const Duration(milliseconds: 200),
+                      );
+                      if (context.mounted) {
+                        _showCreateRollatorBottomSheet(context);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.login_rounded,
+                      color: Color(0xFF0F4FDB),
+                    ),
+                    title: const Text('Join Rollator'),
+                    subtitle: const Text('Claim a rollator using the QR code'),
+                    onTap: () async {
+                      await Navigator.of(sheetContext).maybePop();
+                      await Future<void>.delayed(
+                        const Duration(milliseconds: 200),
+                      );
+                      if (context.mounted) {
+                        _showJoinRollatorDialog(context);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.router_rounded,
+                      color: Color(0xFF0F4FDB),
+                    ),
+                    title: const Text('Firmware Provisioning'),
+                    subtitle: const Text(
+                      'Scan QR, cek AP, dan kirim WiFi rumah',
+                    ),
+                    onTap: () async {
+                      await Navigator.of(sheetContext).maybePop();
+                      await Future<void>.delayed(
+                        const Duration(milliseconds: 200),
+                      );
+                      if (context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => FirmwareProvisioningPage(
+                              rollatorRepository: rollatorRepository,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -512,15 +628,23 @@ extension on LoginPage {
   Future<void> _showJoinRollatorDialog(BuildContext context) async {
     final result = await showDialog<RollatorClaimResult>(
       context: context,
-      builder: (dialogContext) => _JoinRollatorDialog(rollatorRepository: rollatorRepository),
+      builder: (dialogContext) =>
+          _JoinRollatorDialog(rollatorRepository: rollatorRepository),
     );
 
     if (!context.mounted || result == null) return;
 
     if (result.success) {
+      final rollator = result.rollator!;
+      await RollatorSessionStore.saveDeviceSession(
+        rollatorCode: rollator.code,
+        deviceName: rollator.label,
+      );
       _goToDashboard(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
     }
   }
 
@@ -534,14 +658,18 @@ extension on LoginPage {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetContext) => _CreateRollatorSheet(rollatorRepository: rollatorRepository),
+      builder: (sheetContext) =>
+          _CreateRollatorSheet(rollatorRepository: rollatorRepository),
     );
 
     if (!context.mounted || record == null) {
       return;
     }
 
-    await RollatorSessionStore.saveRollatorCode(record.code);
+    await RollatorSessionStore.saveDeviceSession(
+      rollatorCode: record.code,
+      deviceName: record.label,
+    );
 
     // Give the previous bottom sheet a short moment to fully unmount before
     // presenting the next one.
@@ -564,7 +692,9 @@ extension on LoginPage {
               children: [
                 Text(
                   'Rollator QR Created',
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -584,7 +714,9 @@ extension on LoginPage {
                 Text(
                   'Firestore code: ${record.code}',
                   textAlign: TextAlign.center,
-                  style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -650,7 +782,11 @@ class _QrScannerMock extends StatelessWidget {
                 height: 2,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0x00FFFFFF), Color(0xFF0F4FDB), Color(0x00FFFFFF)],
+                    colors: [
+                      Color(0x00FFFFFF),
+                      Color(0xFF0F4FDB),
+                      Color(0x00FFFFFF),
+                    ],
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -686,10 +822,26 @@ class _QrCornerPainter extends CustomPainter {
       canvas.drawLine(start, start + vertical, paint);
     }
 
-    drawCorner(const Offset(padding, padding), const Offset(cornerLength, 0), const Offset(0, cornerLength));
-    drawCorner(Offset(size.width - padding, padding), const Offset(-cornerLength, 0), const Offset(0, cornerLength));
-    drawCorner(Offset(padding, size.height - padding), const Offset(cornerLength, 0), const Offset(0, -cornerLength));
-    drawCorner(Offset(size.width - padding, size.height - padding), const Offset(-cornerLength, 0), const Offset(0, -cornerLength));
+    drawCorner(
+      const Offset(padding, padding),
+      const Offset(cornerLength, 0),
+      const Offset(0, cornerLength),
+    );
+    drawCorner(
+      Offset(size.width - padding, padding),
+      const Offset(-cornerLength, 0),
+      const Offset(0, cornerLength),
+    );
+    drawCorner(
+      Offset(padding, size.height - padding),
+      const Offset(cornerLength, 0),
+      const Offset(0, -cornerLength),
+    );
+    drawCorner(
+      Offset(size.width - padding, size.height - padding),
+      const Offset(-cornerLength, 0),
+      const Offset(0, -cornerLength),
+    );
   }
 
   @override
@@ -777,10 +929,8 @@ class _RollatorQrScannerPageState extends State<_RollatorQrScannerPage> {
                           child: Text(
                             'Arahkan kamera ke QR rollator. Saat kode terbaca, app akan langsung menghubungkan akunmu.',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.white,
-                                  height: 1.35,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.white, height: 1.35),
                           ),
                         ),
                       ),
@@ -799,7 +949,9 @@ class _RollatorQrScannerPageState extends State<_RollatorQrScannerPage> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     side: const BorderSide(color: Colors.white24),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: const Text('Close Scanner'),
                 ),
@@ -822,7 +974,12 @@ class _ScannerOverlayPainter extends CustomPainter {
     final frameHeight = size.width * 0.72;
     final frameLeft = (size.width - frameWidth) / 2;
     final frameTop = (size.height - frameHeight) / 2 - 32;
-    final frameRect = Rect.fromLTWH(frameLeft, frameTop, frameWidth, frameHeight);
+    final frameRect = Rect.fromLTWH(
+      frameLeft,
+      frameTop,
+      frameWidth,
+      frameHeight,
+    );
 
     canvas.saveLayer(Offset.zero & size, Paint());
     canvas.drawRect(Offset.zero & size, dimPaint);

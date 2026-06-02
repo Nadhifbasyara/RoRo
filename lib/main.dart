@@ -2,6 +2,7 @@ library roro_main;
 
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,11 +12,13 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'data/distance_repository.dart';
+import 'data/rollator_firmware_client.dart';
 import 'data/rollator_repository.dart';
 import 'data/rollator_session_store.dart';
 import 'firebase_options.dart';
 
 part 'pages/dashboard_page.dart';
+part 'pages/firmware_provisioning_page.dart';
 part 'pages/login_page.dart';
 part 'pages/tracker_page.dart';
 part 'pages/profile_page.dart';
@@ -23,9 +26,7 @@ part 'pages/alerts_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
     MyApp(
       distanceRepository: FirebaseDistanceRepository(),
@@ -58,15 +59,21 @@ class MyApp extends StatelessWidget {
         textTheme: GoogleFonts.manropeTextTheme(baseTheme.textTheme),
       ),
       home: SessionGate(
-        distanceRepository: distanceRepository ?? const DemoDistanceRepository(),
-        rollatorRepository: rollatorRepository ?? const DemoRollatorRepository(),
+        distanceRepository:
+            distanceRepository ?? const DemoDistanceRepository(),
+        rollatorRepository:
+            rollatorRepository ?? const DemoRollatorRepository(),
       ),
     );
   }
 }
 
 class SessionGate extends StatefulWidget {
-  const SessionGate({super.key, required this.distanceRepository, required this.rollatorRepository});
+  const SessionGate({
+    super.key,
+    required this.distanceRepository,
+    required this.rollatorRepository,
+  });
 
   final DistanceRepository distanceRepository;
   final RollatorRepository rollatorRepository;
@@ -89,9 +96,7 @@ class _SessionGateState extends State<SessionGate> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -113,7 +118,11 @@ class _SessionGateState extends State<SessionGate> {
 }
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key, required this.distanceRepository, required this.rollatorRepository});
+  const DashboardPage({
+    super.key,
+    required this.distanceRepository,
+    required this.rollatorRepository,
+  });
 
   final DistanceRepository distanceRepository;
   final RollatorRepository rollatorRepository;
@@ -136,26 +145,37 @@ class _DashboardPageState extends State<DashboardPage> {
     final colorScheme = Theme.of(context).colorScheme;
 
     final pages = [
-      DashboardHome(distanceRepository: widget.distanceRepository, colorScheme: colorScheme),
-      TrackerPage(distanceRepository: widget.distanceRepository, colorScheme: colorScheme),
+      DashboardHome(
+        distanceRepository: widget.distanceRepository,
+        colorScheme: colorScheme,
+      ),
+      TrackerPage(
+        distanceRepository: widget.distanceRepository,
+        colorScheme: colorScheme,
+      ),
       AlertsPage(colorScheme: colorScheme),
       ProfilePage(
         colorScheme: colorScheme,
+        rollatorRepository: widget.rollatorRepository,
         onSignOut: () async {
-          final activeRollatorCode = await RollatorSessionStore.loadRollatorCode();
+          final navigator = Navigator.of(context);
+          final activeRollatorCode =
+              await RollatorSessionStore.loadRollatorCode();
           if (activeRollatorCode != null) {
             try {
-              await widget.rollatorRepository.unlinkCurrentUserFromRollator(activeRollatorCode);
+              await widget.rollatorRepository.unlinkCurrentUserFromRollator(
+                activeRollatorCode,
+              );
             } catch (_) {
               // Keep sign-out resilient even if unlink fails.
             }
           }
           await RollatorSessionStore.clear();
           await FirebaseAuth.instance.signOut();
-          if (!context.mounted) {
+          if (!mounted) {
             return;
           }
-          Navigator.of(context).pushAndRemoveUntil(
+          navigator.pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (_) => LoginPage(
                 distanceRepository: widget.distanceRepository,
@@ -165,14 +185,40 @@ class _DashboardPageState extends State<DashboardPage> {
             (_) => false,
           );
         },
+        onReconfigureWifi: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          final navigator = Navigator.of(context);
+          final activeRollatorCode =
+              await RollatorSessionStore.loadRollatorCode();
+          if (!mounted) {
+            return;
+          }
+
+          if (activeRollatorCode == null) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Tidak ada rollator aktif. Scan QR dulu dari halaman login.',
+                ),
+              ),
+            );
+            return;
+          }
+
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => FirmwareProvisioningPage(
+                rollatorRepository: widget.rollatorRepository,
+                initialRollatorCode: activeRollatorCode,
+              ),
+            ),
+          );
+        },
       ),
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: _BottomNavBar(
         selectedIndex: _selectedIndex,
         onTabSelected: _handleTabSelected,
@@ -249,11 +295,15 @@ class _FireStreakCard extends StatelessWidget {
             final background = hasWalkedToday
                 ? const [Color(0xFFEF4444), Color(0xFFF97316)]
                 : const [Color(0xFF9CA3AF), Color(0xFF6B7280)];
-            final title = hasWalkedToday ? 'Streak Aman Hari Ini' : 'Streak Hampir Putus';
+            final title = hasWalkedToday
+                ? 'Streak Aman Hari Ini'
+                : 'Streak Hampir Putus';
             final subtitle = hasWalkedToday
                 ? 'Pasien sudah jalan, streak tetap lanjut.'
                 : 'Belum ada jalan hari ini, ayo jaga streak.';
-            final buttonLabel = hasWalkedToday ? 'Sudah Ditandai' : 'Saya Sudah Jalan';
+            final buttonLabel = hasWalkedToday
+                ? 'Sudah Ditandai'
+                : 'Saya Sudah Jalan';
 
             return Container(
               width: double.infinity,
@@ -303,7 +353,8 @@ class _FireStreakCard extends StatelessWidget {
                       children: [
                         Text(
                           'FIRE STREAK',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
                                 color: Colors.white.withOpacity(0.95),
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.0,
@@ -312,7 +363,8 @@ class _FireStreakCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '$streakDays Hari',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.6,
@@ -321,7 +373,8 @@ class _FireStreakCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           title,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -329,7 +382,8 @@ class _FireStreakCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           subtitle,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
                                 color: Colors.white.withOpacity(0.92),
                                 fontWeight: FontWeight.w600,
                               ),
@@ -342,22 +396,31 @@ class _FireStreakCard extends StatelessWidget {
                                 ? null
                                 : () async {
                                     try {
-                                      await distanceRepository.markWalkedToday();
+                                      await distanceRepository
+                                          .markWalkedToday();
                                       if (!context.mounted) {
                                         return;
                                       }
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         const SnackBar(
-                                          content: Text('Mantap, jalan hari ini sudah ditandai.'),
+                                          content: Text(
+                                            'Mantap, jalan hari ini sudah ditandai.',
+                                          ),
                                         ),
                                       );
                                     } catch (_) {
                                       if (!context.mounted) {
                                         return;
                                       }
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         const SnackBar(
-                                          content: Text('Gagal menandai jalan hari ini. Coba lagi.'),
+                                          content: Text(
+                                            'Gagal menandai jalan hari ini. Coba lagi.',
+                                          ),
                                         ),
                                       );
                                     }
@@ -367,16 +430,19 @@ class _FireStreakCard extends StatelessWidget {
                               foregroundColor: hasWalkedToday
                                   ? const Color(0xFF6B7280)
                                   : const Color(0xFFDC2626),
-                              disabledBackgroundColor: Colors.white.withOpacity(0.85),
+                              disabledBackgroundColor: Colors.white.withOpacity(
+                                0.85,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                              textStyle: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(fontWeight: FontWeight.w900),
                             ),
                             icon: Icon(
-                              hasWalkedToday ? Icons.check_circle_rounded : Icons.touch_app_rounded,
+                              hasWalkedToday
+                                  ? Icons.check_circle_rounded
+                                  : Icons.touch_app_rounded,
                               size: 18,
                             ),
                             label: Text(buttonLabel),
@@ -397,9 +463,9 @@ class _FireStreakCard extends StatelessWidget {
 
 String _formatThousands(int value) {
   return value.toString().replaceAllMapped(
-        RegExp(r'\B(?=(\d{3})+(?!\d))'),
-        (match) => ',',
-      );
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (match) => ',',
+  );
 }
 
 class _TopBar extends StatelessWidget {
@@ -420,16 +486,20 @@ class _TopBar extends StatelessWidget {
                 color: colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.spa_rounded, color: colorScheme.primary, size: 18),
+              child: Icon(
+                Icons.spa_rounded,
+                color: colorScheme.primary,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Text(
               'RoRo',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
-                  ),
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4,
+              ),
             ),
           ],
         ),
@@ -471,7 +541,11 @@ class _PatientCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Colors.white, width: 2),
                 ),
-                child: const Icon(Icons.monitor_heart_rounded, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.monitor_heart_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
               Positioned(
                 right: -2,
@@ -496,21 +570,25 @@ class _PatientCard extends StatelessWidget {
                 Text(
                   "Albert's RoRo",
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.memory_rounded, color: colorScheme.primary, size: 16),
+                    Icon(
+                      Icons.memory_rounded,
+                      color: colorScheme.primary,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'ESP32: Online',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF4B5563),
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: const Color(0xFF4B5563),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -580,10 +658,10 @@ class _ActionButton extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w800,
-                    height: 1.05,
-                  ),
+                color: foreground,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+              ),
             ),
           ],
         ),
@@ -643,7 +721,10 @@ class _MetricCard extends StatelessWidget {
               ),
               if (badgeText != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE9FBF3),
                     borderRadius: BorderRadius.circular(999),
@@ -651,10 +732,10 @@ class _MetricCard extends StatelessWidget {
                   child: Text(
                     badgeText!,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFF17B26A),
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
+                      color: const Color(0xFF17B26A),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
             ],
@@ -663,10 +744,10 @@ class _MetricCard extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: const Color(0xFF4B5563),
-                  letterSpacing: 1.4,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: const Color(0xFF4B5563),
+              letterSpacing: 1.4,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 6),
           Row(
@@ -675,10 +756,10 @@ class _MetricCard extends StatelessWidget {
               Text(
                 value,
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.2,
-                      color: const Color(0xFF0F172A),
-                    ),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.2,
+                  color: const Color(0xFF0F172A),
+                ),
               ),
               const SizedBox(width: 8),
               Padding(
@@ -686,9 +767,9 @@ class _MetricCard extends StatelessWidget {
                 child: Text(
                   suffix,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF64748B),
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -730,13 +811,17 @@ class _OperatingModeCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.settings_input_component_rounded, color: const Color(0xFF1550D4), size: 20),
+                  Icon(
+                    Icons.settings_input_component_rounded,
+                    color: const Color(0xFF1550D4),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Current Operating Mode',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -790,9 +875,15 @@ class _ModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = selected ? const Color(0xFFDCE5FF) : const Color(0xFFF3F5F8);
-    final textColor = selected ? const Color(0xFF123FD6) : const Color(0xFF374151);
-    final dotColor = selected ? const Color(0xFF6F8EEB) : const Color(0xFF8A95A6);
+    final background = selected
+        ? const Color(0xFFDCE5FF)
+        : const Color(0xFFF3F5F8);
+    final textColor = selected
+        ? const Color(0xFF123FD6)
+        : const Color(0xFF374151);
+    final dotColor = selected
+        ? const Color(0xFF6F8EEB)
+        : const Color(0xFF8A95A6);
 
     return Container(
       height: 46,
@@ -809,9 +900,9 @@ class _ModePill extends StatelessWidget {
             child: Text(
               title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: textColor,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           Container(
@@ -850,11 +941,7 @@ class _TrackingCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _WorldMapPainter(),
-            ),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _WorldMapPainter())),
           Positioned(
             top: 18,
             right: 18,
@@ -867,7 +954,11 @@ class _TrackingCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.location_on_rounded, color: Colors.white, size: 14),
+                  Icon(
+                    Icons.location_on_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                   SizedBox(width: 6),
                   Text(
                     'Live Tracking',
@@ -890,25 +981,25 @@ class _TrackingCard extends StatelessWidget {
                 Text(
                   'RECENT ACTIVITY',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Colors.white.withOpacity(0.85),
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.6,
-                      ),
+                    color: Colors.white.withOpacity(0.85),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.6,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Living Room -> Kitchen',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withOpacity(0.45),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.45),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
                       ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Align(
@@ -916,10 +1007,10 @@ class _TrackingCard extends StatelessWidget {
                   child: Text(
                     'MOVEMENT HISTORY',
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.15),
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.8,
-                        ),
+                      color: Colors.white.withOpacity(0.15),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.8,
+                    ),
                   ),
                 ),
               ],
@@ -938,9 +1029,16 @@ class _WorldMapPainter extends CustomPainter {
     canvas.drawRect(Offset.zero & size, backgroundPaint);
 
     final mapPaint = Paint()..color = const Color(0xFF6B6F78).withOpacity(0.48);
-    final highlightPaint = Paint()..color = const Color(0xFF7E837C).withOpacity(0.55);
+    final highlightPaint = Paint()
+      ..color = const Color(0xFF7E837C).withOpacity(0.55);
 
-    void drawOval(double left, double top, double width, double height, {bool highlight = false}) {
+    void drawOval(
+      double left,
+      double top,
+      double width,
+      double height, {
+      bool highlight = false,
+    }) {
       final paint = highlight ? highlightPaint : mapPaint;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
@@ -951,18 +1049,74 @@ class _WorldMapPainter extends CustomPainter {
       );
     }
 
-    drawOval(size.width * 0.05, size.height * 0.22, size.width * 0.18, size.height * 0.22);
-    drawOval(size.width * 0.15, size.height * 0.18, size.width * 0.14, size.height * 0.18, highlight: true);
-    drawOval(size.width * 0.32, size.height * 0.25, size.width * 0.1, size.height * 0.12);
-    drawOval(size.width * 0.47, size.height * 0.18, size.width * 0.22, size.height * 0.18, highlight: true);
-    drawOval(size.width * 0.68, size.height * 0.18, size.width * 0.18, size.height * 0.22);
-    drawOval(size.width * 0.83, size.height * 0.30, size.width * 0.07, size.height * 0.12, highlight: true);
-    drawOval(size.width * 0.08, size.height * 0.58, size.width * 0.16, size.height * 0.2, highlight: true);
-    drawOval(size.width * 0.27, size.height * 0.62, size.width * 0.14, size.height * 0.18);
-    drawOval(size.width * 0.52, size.height * 0.56, size.width * 0.12, size.height * 0.16, highlight: true);
-    drawOval(size.width * 0.74, size.height * 0.56, size.width * 0.16, size.height * 0.2);
+    drawOval(
+      size.width * 0.05,
+      size.height * 0.22,
+      size.width * 0.18,
+      size.height * 0.22,
+    );
+    drawOval(
+      size.width * 0.15,
+      size.height * 0.18,
+      size.width * 0.14,
+      size.height * 0.18,
+      highlight: true,
+    );
+    drawOval(
+      size.width * 0.32,
+      size.height * 0.25,
+      size.width * 0.1,
+      size.height * 0.12,
+    );
+    drawOval(
+      size.width * 0.47,
+      size.height * 0.18,
+      size.width * 0.22,
+      size.height * 0.18,
+      highlight: true,
+    );
+    drawOval(
+      size.width * 0.68,
+      size.height * 0.18,
+      size.width * 0.18,
+      size.height * 0.22,
+    );
+    drawOval(
+      size.width * 0.83,
+      size.height * 0.30,
+      size.width * 0.07,
+      size.height * 0.12,
+      highlight: true,
+    );
+    drawOval(
+      size.width * 0.08,
+      size.height * 0.58,
+      size.width * 0.16,
+      size.height * 0.2,
+      highlight: true,
+    );
+    drawOval(
+      size.width * 0.27,
+      size.height * 0.62,
+      size.width * 0.14,
+      size.height * 0.18,
+    );
+    drawOval(
+      size.width * 0.52,
+      size.height * 0.56,
+      size.width * 0.12,
+      size.height * 0.16,
+      highlight: true,
+    );
+    drawOval(
+      size.width * 0.74,
+      size.height * 0.56,
+      size.width * 0.16,
+      size.height * 0.2,
+    );
 
-    final dotsPaint = Paint()..color = const Color(0xFFE0A35B).withOpacity(0.65);
+    final dotsPaint = Paint()
+      ..color = const Color(0xFFE0A35B).withOpacity(0.65);
     final points = <Offset>[
       Offset(size.width * 0.24, size.height * 0.38),
       Offset(size.width * 0.41, size.height * 0.42),
@@ -981,8 +1135,18 @@ class _WorldMapPainter extends CustomPainter {
 
     final path = Path()
       ..moveTo(size.width * 0.18, size.height * 0.44)
-      ..quadraticBezierTo(size.width * 0.4, size.height * 0.3, size.width * 0.63, size.height * 0.5)
-      ..quadraticBezierTo(size.width * 0.72, size.height * 0.58, size.width * 0.84, size.height * 0.42);
+      ..quadraticBezierTo(
+        size.width * 0.4,
+        size.height * 0.3,
+        size.width * 0.63,
+        size.height * 0.5,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.72,
+        size.height * 0.58,
+        size.width * 0.84,
+        size.height * 0.42,
+      );
     canvas.drawPath(path, linePaint);
   }
 
@@ -1018,18 +1182,18 @@ class _InsightsCard extends StatelessWidget {
               Text(
                 'Gait & Mobility\nInsights',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                    ),
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
+                ),
               ),
               Text(
                 'WEEKLY\nREPORT',
                 textAlign: TextAlign.right,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: const Color(0xFF1550D4),
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
-                    ),
+                  color: const Color(0xFF1550D4),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.6,
+                ),
               ),
             ],
           ),
@@ -1045,10 +1209,26 @@ class _InsightsCard extends StatelessWidget {
               childAspectRatio: 1.3,
             ),
             children: const [
-              _InsightTile(label: 'AVG SPEED', value: '0.8 m/s', color: Color(0xFF1550D4)),
-              _InsightTile(label: 'STABILITY', value: 'High', color: Color(0xFFF59E0B)),
-              _InsightTile(label: 'STEPS', value: '4,120', color: Color(0xFF17B26A)),
-              _InsightTile(label: 'REST STOPS', value: '3 Today', color: Color(0xFF3B82F6)),
+              _InsightTile(
+                label: 'AVG SPEED',
+                value: '0.8 m/s',
+                color: Color(0xFF1550D4),
+              ),
+              _InsightTile(
+                label: 'STABILITY',
+                value: 'High',
+                color: Color(0xFFF59E0B),
+              ),
+              _InsightTile(
+                label: 'STEPS',
+                value: '4,120',
+                color: Color(0xFF17B26A),
+              ),
+              _InsightTile(
+                label: 'REST STOPS',
+                value: '3 Today',
+                color: Color(0xFF3B82F6),
+              ),
             ],
           ),
         ],
@@ -1084,18 +1264,18 @@ class _InsightTile extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF6B7280),
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                ),
+              color: const Color(0xFF6B7280),
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF111827),
-                ),
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF111827),
+            ),
           ),
         ],
       ),
@@ -1197,10 +1377,10 @@ class _NavItem extends StatelessWidget {
             Text(
               label.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.4,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
+              ),
             ),
           ],
         ),
@@ -1250,10 +1430,10 @@ class _TrackerWeeklyTotalCard extends StatelessWidget {
                   Text(
                     'WEEKLY TOTAL',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: const Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
+                      color: const Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -1261,7 +1441,8 @@ class _TrackerWeeklyTotalCard extends StatelessWidget {
                     children: [
                       Text(
                         kilometers.toStringAsFixed(1),
-                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        style: Theme.of(context).textTheme.displayMedium
+                            ?.copyWith(
                               color: const Color(0xFF1D4ED8),
                               fontWeight: FontWeight.w900,
                               letterSpacing: -1.2,
@@ -1272,7 +1453,8 @@ class _TrackerWeeklyTotalCard extends StatelessWidget {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
                           'km',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
                                 color: const Color(0xFF111827),
                                 fontWeight: FontWeight.w700,
                               ),
@@ -1283,14 +1465,18 @@ class _TrackerWeeklyTotalCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, color: colorScheme.primary, size: 20),
+                      Icon(
+                        Icons.timer_outlined,
+                        color: colorScheme.primary,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         walkingTime,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF111827),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: const Color(0xFF111827),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -1359,9 +1545,9 @@ class _TrackerDailyTargetCard extends StatelessWidget {
                   Text(
                     "Today’s Target",
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF111827),
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF111827),
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Center(
@@ -1382,7 +1568,8 @@ class _TrackerDailyTargetCard extends StatelessWidget {
                           ),
                           Text(
                             '$percentage%',
-                            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            style: Theme.of(context).textTheme.displayMedium
+                                ?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF1F1B2E),
                                   fontSize: 45,
@@ -1397,16 +1584,32 @@ class _TrackerDailyTargetCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Achievement', style: Theme.of(context).textTheme.bodyMedium),
-                      Text('${_formatThousands(achievement)}m', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        'Achievement',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Text(
+                        '${_formatThousands(achievement)}m',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Daily Goal', style: Theme.of(context).textTheme.bodyMedium),
-                      Text('${_formatThousands(safeGoal)}m', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        'Daily Goal',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Text(
+                        '${_formatThousands(safeGoal)}m',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -1497,16 +1700,16 @@ class _TrackerRehabScoreCard extends StatelessWidget {
                   Text(
                     'Rehab Score',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF111827),
-                        ),
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF111827),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Based on gait stability & speed',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF4B5563),
-                        ),
+                      color: const Color(0xFF4B5563),
+                    ),
                   ),
                 ],
               ),
@@ -1525,9 +1728,9 @@ class _TrackerRehabScoreCard extends StatelessWidget {
                     'CURRENT\nWEEK',
                     textAlign: TextAlign.left,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: const Color(0xFF111827),
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: const Color(0xFF111827),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -1550,7 +1753,13 @@ class _TrackerRehabScoreCard extends StatelessWidget {
               Text('MON'),
               Text('TUE'),
               Text('WED'),
-              Text('THU', style: TextStyle(color: Color(0xFF1D4ED8), fontWeight: FontWeight.w700)),
+              Text(
+                'THU',
+                style: TextStyle(
+                  color: Color(0xFF1D4ED8),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               Text('FRI'),
               Text('SAT'),
               Text('SUN'),
@@ -1585,9 +1794,24 @@ class _SimpleLineChartPainter extends CustomPainter {
 
     final path = Path()
       ..moveTo(size.width * 0.08, size.height * 0.72)
-      ..quadraticBezierTo(size.width * 0.28, size.height * 0.48, size.width * 0.44, size.height * 0.56)
-      ..quadraticBezierTo(size.width * 0.58, size.height * 0.62, size.width * 0.72, size.height * 0.36)
-      ..quadraticBezierTo(size.width * 0.84, size.height * 0.20, size.width * 0.92, size.height * 0.26);
+      ..quadraticBezierTo(
+        size.width * 0.28,
+        size.height * 0.48,
+        size.width * 0.44,
+        size.height * 0.56,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.58,
+        size.height * 0.62,
+        size.width * 0.72,
+        size.height * 0.36,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.84,
+        size.height * 0.20,
+        size.width * 0.92,
+        size.height * 0.26,
+      );
 
     canvas.drawPath(path, linePaint);
 
@@ -1635,26 +1859,38 @@ class _TrackerSessionHistoryCard extends StatelessWidget {
                 Text(
                   'Session History',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF111827),
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF111827),
+                  ),
                 ),
                 Text(
                   'View All',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF1D4ED8),
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: const Color(0xFF1D4ED8),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
           ),
           const Divider(height: 1),
-          _SessionRow(title: 'Afternoon Walk', duration: '15 mins', date: 'Oct 24 • 02:30 PM'),
+          _SessionRow(
+            title: 'Afternoon Walk',
+            duration: '15 mins',
+            date: 'Oct 24 • 02:30 PM',
+          ),
           const Divider(height: 1),
-          _SessionRow(title: 'Morning Rehab', duration: '10 mins', date: 'Oct 24 • 09:15 AM'),
+          _SessionRow(
+            title: 'Morning Rehab',
+            duration: '10 mins',
+            date: 'Oct 24 • 09:15 AM',
+          ),
           const Divider(height: 1),
-          _SessionRow(title: 'Garden Stroll', duration: '25 mins', date: 'Oct 23 • 04:45 PM'),
+          _SessionRow(
+            title: 'Garden Stroll',
+            duration: '25 mins',
+            date: 'Oct 23 • 04:45 PM',
+          ),
         ],
       ),
     );
@@ -1662,7 +1898,11 @@ class _TrackerSessionHistoryCard extends StatelessWidget {
 }
 
 class _SessionRow extends StatelessWidget {
-  const _SessionRow({required this.title, required this.duration, required this.date});
+  const _SessionRow({
+    required this.title,
+    required this.duration,
+    required this.date,
+  });
 
   final String title;
   final String duration;
@@ -1681,7 +1921,10 @@ class _SessionRow extends StatelessWidget {
               color: const Color(0xFFEAF1FF),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.directions_walk_rounded, color: Color(0xFF1D4ED8)),
+            child: const Icon(
+              Icons.directions_walk_rounded,
+              color: Color(0xFF1D4ED8),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1693,7 +1936,8 @@ class _SessionRow extends StatelessWidget {
                     Expanded(
                       child: Text(
                         title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF111827),
                             ),
@@ -1702,12 +1946,15 @@ class _SessionRow extends StatelessWidget {
                     Text(
                       duration,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF111827),
-                          ),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF111827),
+                      ),
                     ),
                     const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1)),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: Color(0xFFCBD5E1),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -1716,17 +1963,17 @@ class _SessionRow extends StatelessWidget {
                     Text(
                       date,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF4B5563),
-                          ),
+                        color: const Color(0xFF4B5563),
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'DURATION',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: const Color(0xFF9CA3AF),
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                          ),
+                        color: const Color(0xFF9CA3AF),
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
                     ),
                   ],
                 ),
@@ -1763,22 +2010,26 @@ class _SimpleComingSoonPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.construction_rounded, size: 54, color: Color(0xFF1D4ED8)),
+                const Icon(
+                  Icons.construction_rounded,
+                  size: 54,
+                  color: Color(0xFF1D4ED8),
+                ),
                 const SizedBox(height: 14),
                 Text(
                   title,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF111827),
-                      ),
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF111827),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   description,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF4B5563),
-                      ),
+                    color: const Color(0xFF4B5563),
+                  ),
                 ),
               ],
             ),

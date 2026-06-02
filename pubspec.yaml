@@ -36,6 +36,7 @@ dependencies:
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.2.0
   shared_preferences: ^2.2.3
+  http: ^1.2.2
 
   # Firebase
   firebase_core: ^2.27.0
