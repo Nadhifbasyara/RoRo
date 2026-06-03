@@ -94,39 +94,40 @@ class FirebaseDistanceRepository implements DistanceRepository {
   final String hasWalkedTodayField;
   final String walkStreakDaysField;
 
-  @override
-  Stream<int> watchDistanceTodayMeters() {
-    return _watchIntField(distanceField);
-  }
+  // Cache the document snapshot stream so every StreamBuilder reuses the
+  // same underlying Firestore listener instead of opening a new one on
+  // each rebuild. asBroadcastStream() lets multiple listeners subscribe.
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _docStream =
+      _firestore
+          .collection(collection)
+          .doc(documentId)
+          .snapshots()
+          .asBroadcastStream();
 
   @override
-  Stream<int> watchWalkingTimeMinutes() {
-    return _watchIntField(walkingTimeField);
-  }
+  Stream<int> watchDistanceTodayMeters() => _mapInt(distanceField);
 
   @override
-  Stream<int> watchWeeklyTotalMeters() {
-    return _watchIntField(weeklyTotalMetersField);
-  }
+  Stream<int> watchWalkingTimeMinutes() => _mapInt(walkingTimeField);
 
   @override
-  Stream<int> watchWeeklyWalkingTimeMinutes() {
-    return _watchIntField(weeklyWalkingTimeMinutesField);
-  }
+  Stream<int> watchWeeklyTotalMeters() => _mapInt(weeklyTotalMetersField);
 
   @override
-  Stream<int> watchTodayTargetAchievementMeters() {
-    return _watchIntField(todayTargetAchievementMetersField);
-  }
+  Stream<int> watchWeeklyWalkingTimeMinutes() =>
+      _mapInt(weeklyWalkingTimeMinutesField);
 
   @override
-  Stream<int> watchTodayTargetGoalMeters() {
-    return _watchIntField(todayTargetGoalMetersField);
-  }
+  Stream<int> watchTodayTargetAchievementMeters() =>
+      _mapInt(todayTargetAchievementMetersField);
+
+  @override
+  Stream<int> watchTodayTargetGoalMeters() =>
+      _mapInt(todayTargetGoalMetersField);
 
   @override
   Stream<String> watchOperatingMode() {
-    return _firestore.collection(collection).doc(documentId).snapshots().map((snapshot) {
+    return _docStream.map((snapshot) {
       final data = snapshot.data();
       final raw = data?[operatingModeField];
       if (raw is String && raw.trim().isNotEmpty) {
@@ -138,7 +139,7 @@ class FirebaseDistanceRepository implements DistanceRepository {
 
   @override
   Stream<bool> watchHasWalkedToday() {
-    return _firestore.collection(collection).doc(documentId).snapshots().map((snapshot) {
+    return _docStream.map((snapshot) {
       final data = snapshot.data();
       final parsed = _toBool(data?[hasWalkedTodayField]);
       if (parsed != null) {
@@ -152,9 +153,7 @@ class FirebaseDistanceRepository implements DistanceRepository {
   }
 
   @override
-  Stream<int> watchWalkStreakDays() {
-    return _watchIntField(walkStreakDaysField);
-  }
+  Stream<int> watchWalkStreakDays() => _mapInt(walkStreakDaysField);
 
   @override
   Future<void> markWalkedToday() async {
@@ -186,8 +185,8 @@ class FirebaseDistanceRepository implements DistanceRepository {
     });
   }
 
-  Stream<int> _watchIntField(String fieldName) {
-    return _firestore.collection(collection).doc(documentId).snapshots().map((snapshot) {
+  Stream<int> _mapInt(String fieldName) {
+    return _docStream.map((snapshot) {
       final data = snapshot.data();
       return _toInt(data?[fieldName]) ?? 0;
     });

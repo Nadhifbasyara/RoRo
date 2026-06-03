@@ -23,6 +23,7 @@ part 'pages/login_page.dart';
 part 'pages/tracker_page.dart';
 part 'pages/profile_page.dart';
 part 'pages/alerts_page.dart';
+part 'pages/session_history_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1503,25 +1504,46 @@ String _formatWeeklyWalkingTime(int minutes) {
   return '${remainingMinutes}m walking time';
 }
 
-class _TrackerDailyTargetCard extends StatelessWidget {
+class _TrackerDailyTargetCard extends StatefulWidget {
   const _TrackerDailyTargetCard({required this.distanceRepository});
 
   final DistanceRepository distanceRepository;
 
   @override
+  State<_TrackerDailyTargetCard> createState() => _TrackerDailyTargetCardState();
+}
+
+class _TrackerDailyTargetCardState extends State<_TrackerDailyTargetCard> {
+  int? _localGoalOverride;
+
+  Future<void> _openEditGoalDialog(BuildContext context, int currentGoal) async {
+    final result = await showDialog<int>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) => _EditGoalDialog(currentGoal: currentGoal),
+    );
+
+    if (result != null && result > 0 && mounted) {
+      setState(() {
+        _localGoalOverride = result;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
-      stream: distanceRepository.watchTodayTargetAchievementMeters(),
+      stream: widget.distanceRepository.watchTodayTargetAchievementMeters(),
       initialData: 320,
-      builder: (context, achievementSnapshot) {
+      builder: (_, achievementSnapshot) {
         final achievement = achievementSnapshot.data ?? 0;
 
         return StreamBuilder<int>(
-          stream: distanceRepository.watchTodayTargetGoalMeters(),
+          stream: widget.distanceRepository.watchTodayTargetGoalMeters(),
           initialData: 500,
-          builder: (context, goalSnapshot) {
-            final goal = goalSnapshot.data ?? 1;
-            final safeGoal = goal <= 0 ? 1 : goal;
+          builder: (_, goalSnapshot) {
+            final streamGoal = goalSnapshot.data ?? 1;
+            final safeGoal = (_localGoalOverride ?? streamGoal).clamp(1, 999999);
             final progress = (achievement / safeGoal).clamp(0.0, 1.0);
             final percentage = (progress * 100).round();
 
@@ -1542,12 +1564,29 @@ class _TrackerDailyTargetCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Today’s Target",
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF111827),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Today's Target",
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF111827),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _openEditGoalDialog(context, safeGoal),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.edit_rounded,
+                            size: 18,
+                            color: const Color(0xFF7C4DFF),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 18),
                   Center(
@@ -1618,6 +1657,96 @@ class _TrackerDailyTargetCard extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class _EditGoalDialog extends StatefulWidget {
+  const _EditGoalDialog({required this.currentGoal});
+
+  final int currentGoal;
+
+  @override
+  State<_EditGoalDialog> createState() => _EditGoalDialogState();
+}
+
+class _EditGoalDialogState extends State<_EditGoalDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.currentGoal.toString());
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Row(
+        children: [
+          Container(
+            height: 38,
+            width: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE9FE),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.flag_rounded, color: Color(0xFF7C4DFF), size: 20),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Edit Daily Goal',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Set a new daily walking distance target in meters.',
+            style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Daily Goal (meters)',
+              hintText: 'e.g. 500',
+              suffixText: 'm',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF7C4DFF), width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel', style: TextStyle(color: Color(0xFF6B7280))),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF7C4DFF),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: () {
+            final parsed = int.tryParse(_controller.text.trim());
+            Navigator.of(context).pop(parsed);
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }
@@ -1863,30 +1992,43 @@ class _TrackerSessionHistoryCard extends StatelessWidget {
                     color: const Color(0xFF111827),
                   ),
                 ),
-                Text(
-                  'View All',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF1D4ED8),
-                    fontWeight: FontWeight.w800,
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const SessionHistoryPage(),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text(
+                      'View All',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: const Color(0xFF1D4ED8),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           const Divider(height: 1),
-          _SessionRow(
+          const _SessionRow(
             title: 'Afternoon Walk',
             duration: '15 mins',
             date: 'Oct 24 • 02:30 PM',
           ),
           const Divider(height: 1),
-          _SessionRow(
+          const _SessionRow(
             title: 'Morning Rehab',
             duration: '10 mins',
             date: 'Oct 24 • 09:15 AM',
           ),
           const Divider(height: 1),
-          _SessionRow(
+          const _SessionRow(
             title: 'Garden Stroll',
             duration: '25 mins',
             date: 'Oct 23 • 04:45 PM',

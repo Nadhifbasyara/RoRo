@@ -42,25 +42,38 @@ class TrackerPage extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2F6BFF),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
-                    const SizedBox(width: 10),
-                    Text(
-                      'On track for your weekly goal!',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SessionHistoryPage(),
                     ),
-                  ],
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2F6BFF),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.history_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Check your history',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

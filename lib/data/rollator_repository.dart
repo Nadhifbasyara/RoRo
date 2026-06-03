@@ -92,8 +92,16 @@ class FirebaseRollatorRepository implements RollatorRepository {
         _fallbackUid ??= 'fallback-${DateTime.now().millisecondsSinceEpoch}';
         return _fallbackUid!;
       }
+      final msg = error.message ?? '';
+      if (msg.contains('Failed to connect') || msg.contains('network') || msg.contains('SocketException')) {
+        throw StateError('Koneksi internet gagal. Pastikan HP Anda sudah terputus dari WiFi perangkat (AP) dan terhubung kembali ke internet (WiFi rumah / paket data), lalu coba lagi.');
+      }
       throw StateError('Firebase Auth error: ${error.code} - ${error.message}');
     } catch (e) {
+      final errorStr = e.toString();
+      if (errorStr.contains('Failed to connect') || errorStr.contains('SocketException') || errorStr.contains('network')) {
+        throw StateError('Koneksi internet gagal. Pastikan HP Anda sudah terputus dari WiFi perangkat (AP) dan terhubung kembali ke internet (WiFi rumah / paket data), lalu coba lagi.');
+      }
       _fallbackUid ??= 'fallback-${DateTime.now().millisecondsSinceEpoch}';
       return _fallbackUid!;
     }
@@ -160,6 +168,10 @@ class FirebaseRollatorRepository implements RollatorRepository {
     } on StateError catch (error) {
       return RollatorClaimResult.failure(error.message);
     } catch (error) {
+      final errStr = error.toString();
+      if (errStr.contains('Failed to connect') || errStr.contains('SocketException') || errStr.contains('network') || errStr.contains('unavailable')) {
+        return const RollatorClaimResult.failure('Koneksi internet gagal. Pastikan HP Anda sudah terputus dari WiFi perangkat (AP) dan terhubung kembali ke internet (WiFi rumah / paket data), lalu coba lagi.');
+      }
       return RollatorClaimResult.failure(error.toString());
     }
   }

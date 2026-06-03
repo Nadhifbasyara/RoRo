@@ -900,7 +900,6 @@ class _ConnectedDeviceCard extends StatelessWidget {
                           rollator?.label ??
                           'RoRo Device',
                       deviceId: session.rollatorCode,
-                      ipAddress: session.ipAddress,
                       mdnsHost: session.mdnsHost,
                     );
                   },
@@ -919,8 +918,7 @@ class _ConnectedDeviceBody extends StatelessWidget {
     required this.colorScheme,
     required this.deviceName,
     required this.deviceId,
-    required this.ipAddress,
-    required this.mdnsHost,
+    this.mdnsHost,
   });
 
   factory _ConnectedDeviceBody.loading(BuildContext context) {
@@ -928,7 +926,6 @@ class _ConnectedDeviceBody extends StatelessWidget {
       colorScheme: Theme.of(context).colorScheme,
       deviceName: 'Memuat device...',
       deviceId: '...',
-      ipAddress: null,
       mdnsHost: null,
     );
   }
@@ -938,7 +935,6 @@ class _ConnectedDeviceBody extends StatelessWidget {
       colorScheme: Theme.of(context).colorScheme,
       deviceName: 'Belum ada device',
       deviceId: 'Scan QR perangkat dulu',
-      ipAddress: null,
       mdnsHost: null,
     );
   }
@@ -946,11 +942,12 @@ class _ConnectedDeviceBody extends StatelessWidget {
   final ColorScheme colorScheme;
   final String deviceName;
   final String deviceId;
-  final String? ipAddress;
   final String? mdnsHost;
 
   @override
   Widget build(BuildContext context) {
+    final displayMdns = (mdnsHost == null || mdnsHost!.trim().isEmpty) ? 'rorro.local' : mdnsHost!.trim();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -1005,14 +1002,9 @@ class _ConnectedDeviceBody extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _DeviceInfoChip(
-                      icon: Icons.router_rounded,
-                      label: 'IP',
-                      value: ipAddress ?? 'Belum ada',
-                    ),
-                    _DeviceInfoChip(
                       icon: Icons.dns_rounded,
                       label: 'mDNS',
-                      value: mdnsHost ?? 'Belum ada',
+                      value: displayMdns,
                     ),
                   ],
                 ),
@@ -1039,7 +1031,7 @@ class _DeviceInfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 180),
+      constraints: const BoxConstraints(maxWidth: 220),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,

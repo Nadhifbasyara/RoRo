@@ -24,7 +24,7 @@ class AlertsPage extends StatelessWidget {
             children: [
               _TopBar(colorScheme: colorScheme),
               const SizedBox(height: 18),
-              _EmergencySosCard(onCall: () => _callEmergency(context), onStop: () => _stopSos(context)),
+              _EmergencySosCard(onCall: () => _callFamily(context), onStop: () => _stopSos(context)),
               const SizedBox(height: 18),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -48,8 +48,6 @@ class AlertsPage extends StatelessWidget {
               _EventLogItem(timeLabel: '10:15 AM', title: 'Fall detected', subtitle: 'Hallway sensor triggered high impact'),
               const SizedBox(height: 10),
               _EventLogItem(timeLabel: '09:30 PM', title: 'SOS Button pressed', subtitle: 'Manual activation by user'),
-              const SizedBox(height: 10),
-              _EventLogItem(timeLabel: 'Yesterday', title: 'Low Battery Warning', subtitle: 'Device reached 15% charge'),
               const SizedBox(height: 22),
               Text('Safety Notifications', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
@@ -66,12 +64,12 @@ class AlertsPage extends StatelessWidget {
     );
   }
 
-  static void _callEmergency(BuildContext context) {
+  static void _callFamily(BuildContext context) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Call Emergency'),
-        content: const Text('Dialing emergency services...'),
+        title: const Text('Call Family'),
+        content: const Text('Dialing family contact...'),
         actions: [
           FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
         ],
@@ -131,7 +129,7 @@ class _EmergencySosCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: onCall,
             icon: const Icon(Icons.call, color: Color(0xFF7C3AED)),
-            label: const Text('CALL 911'),
+            label: const Text('CALL FAMILY'),
             style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF7C3AED), minimumSize: const Size.fromHeight(48)),
           ),
           const SizedBox(height: 10),
