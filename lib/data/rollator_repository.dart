@@ -236,6 +236,7 @@ class RollatorRecord {
     this.label,
     this.createdAt,
     this.updatedAt,
+    this.isOnline,
   });
 
   final String code;
@@ -243,6 +244,8 @@ class RollatorRecord {
   final List<String> linkedAccountIds;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  /// null = belum ada data dari firmware
+  final bool? isOnline;
 
   factory RollatorRecord.fromSnapshot(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data() ?? const <String, dynamic>{};
@@ -254,6 +257,7 @@ class RollatorRecord {
       ),
       createdAt: _timestampToDateTime(data['createdAt']),
       updatedAt: _timestampToDateTime(data['updatedAt']),
+      isOnline: data['isOnline'] is bool ? data['isOnline'] as bool : false,
     );
   }
 

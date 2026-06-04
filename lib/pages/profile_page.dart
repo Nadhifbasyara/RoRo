@@ -891,7 +891,7 @@ class _ConnectedDeviceCard extends StatelessWidget {
                   stream: rollatorRepository.watchRollatorByCode(
                     session.rollatorCode,
                   ),
-                  builder: (context, rollatorSnapshot) {
+                  builder: (_, rollatorSnapshot) {
                     final rollator = rollatorSnapshot.data;
                     return _ConnectedDeviceBody(
                       colorScheme: colorScheme,
@@ -901,6 +901,7 @@ class _ConnectedDeviceCard extends StatelessWidget {
                           'RoRo Device',
                       deviceId: session.rollatorCode,
                       mdnsHost: session.mdnsHost,
+                      isOnline: rollator?.isOnline ?? false,
                     );
                   },
                 );
@@ -919,6 +920,7 @@ class _ConnectedDeviceBody extends StatelessWidget {
     required this.deviceName,
     required this.deviceId,
     this.mdnsHost,
+    this.isOnline,
   });
 
   factory _ConnectedDeviceBody.loading(BuildContext context) {
@@ -927,6 +929,7 @@ class _ConnectedDeviceBody extends StatelessWidget {
       deviceName: 'Memuat device...',
       deviceId: '...',
       mdnsHost: null,
+      isOnline: null,
     );
   }
 
@@ -936,6 +939,7 @@ class _ConnectedDeviceBody extends StatelessWidget {
       deviceName: 'Belum ada device',
       deviceId: 'Scan QR perangkat dulu',
       mdnsHost: null,
+      isOnline: null,
     );
   }
 
@@ -943,6 +947,8 @@ class _ConnectedDeviceBody extends StatelessWidget {
   final String deviceName;
   final String deviceId;
   final String? mdnsHost;
+  /// null = belum ada data dari firmware
+  final bool? isOnline;
 
   @override
   Widget build(BuildContext context) {
@@ -958,33 +964,63 @@ class _ConnectedDeviceBody extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 56,
-            width: 56,
-            decoration: BoxDecoration(
-              color: colorScheme.primary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.device_hub_rounded,
-              color: Colors.white,
-              size: 30,
-            ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                height: 56,
+                width: 56,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.device_hub_rounded,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              // Status dot — kanan bawah icon
+              if (isOnline != null)
+                Positioned(
+                  right: -3,
+                  bottom: -3,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: isOnline! ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  deviceName,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF111827),
-                    height: 1.15,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        deviceName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF111827),
+                          height: 1.15,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Badge ON / OFF
+                    _OnlineBadge(isOnline: isOnline),
+                  ],
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -1009,6 +1045,53 @@ class _ConnectedDeviceBody extends StatelessWidget {
                   ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnlineBadge extends StatelessWidget {
+  const _OnlineBadge({required this.isOnline});
+
+  final bool? isOnline;
+
+  @override
+  Widget build(BuildContext context) {
+    // isOnline == null berarti loading/belum ada device — jangan tampilkan badge
+    if (isOnline == null) return const SizedBox.shrink();
+
+    final on = isOnline!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: on ? const Color(0xFFDCFCE7) : const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: on ? const Color(0xFF86EFAC) : const Color(0xFFD1D5DB),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: on ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            on ? 'ON' : 'OFF',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: on ? const Color(0xFF15803D) : const Color(0xFF6B7280),
+              letterSpacing: 0.6,
             ),
           ),
         ],
