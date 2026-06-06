@@ -1,9 +1,15 @@
 part of roro_main;
 
 class DashboardHome extends StatelessWidget {
-  const DashboardHome({super.key, required this.distanceRepository, required this.colorScheme});
+  const DashboardHome({
+    super.key,
+    required this.distanceRepository,
+    required this.rollatorRepository,
+    required this.colorScheme,
+  });
 
   final DistanceRepository distanceRepository;
+  final RollatorRepository rollatorRepository;
   final ColorScheme colorScheme;
 
   @override
@@ -43,6 +49,7 @@ class DashboardHome extends StatelessWidget {
               const SizedBox(height: 16),
               _OperatingModeCard(
                 distanceRepository: distanceRepository,
+                rollatorRepository: rollatorRepository,
               ),
               const SizedBox(height: 16),
               const _InsightsCard(),

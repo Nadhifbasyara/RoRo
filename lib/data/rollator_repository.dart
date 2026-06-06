@@ -14,6 +14,10 @@ abstract class RollatorRepository {
   Future<void> clearSos(String rollatorCode);
   /// Stream sosHistory dari document rollator.
   Stream<List<SosHistoryEntry>> watchSosHistory(String rollatorCode);
+  /// Stream status gas realtime — true = sedang ditekan/berjalan.
+  Stream<bool> watchGas(String rollatorCode);
+  /// Stream riwayat gas dari sub-collection 'gas', terbaru di atas.
+  Stream<List<GasHistoryEntry>> watchGasHistory(String rollatorCode);
 }
 
 class DemoRollatorRepository implements RollatorRepository {
@@ -73,6 +77,13 @@ class DemoRollatorRepository implements RollatorRepository {
   @override
   Stream<List<SosHistoryEntry>> watchSosHistory(String rollatorCode) =>
       Stream<List<SosHistoryEntry>>.value(const []);
+
+  @override
+  Stream<bool> watchGas(String rollatorCode) => Stream<bool>.value(false);
+
+  @override
+  Stream<List<GasHistoryEntry>> watchGasHistory(String rollatorCode) =>
+      Stream<List<GasHistoryEntry>>.value(const []);
 }
 
 class FirebaseRollatorRepository implements RollatorRepository {
@@ -281,6 +292,29 @@ class FirebaseRollatorRepository implements RollatorRepository {
       return entries;
     });
   }
+
+  @override
+  Stream<bool> watchGas(String rollatorCode) {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return Stream<bool>.value(false);
+    return _rollators.doc(code).snapshots().map((snapshot) {
+      return snapshot.data()?['gas'] == true;
+    });
+  }
+
+  @override
+  Stream<List<GasHistoryEntry>> watchGasHistory(String rollatorCode) {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return Stream<List<GasHistoryEntry>>.value(const []);
+    return _rollators
+        .doc(code)
+        .collection('gas')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((query) => query.docs
+            .map((doc) => GasHistoryEntry.fromMap(doc.data()))
+            .toList());
+  }
 }
 
 class RollatorRecord {
@@ -367,6 +401,21 @@ class SosHistoryEntry {
   factory SosHistoryEntry.fromMap(Map<String, dynamic> map) {
     return SosHistoryEntry(
       sos: map['sos'] == true,
+      timestamp: RollatorRecord._timestampToDateTime(map['timestamp']),
+    );
+  }
+}
+
+class GasHistoryEntry {
+  const GasHistoryEntry({required this.status, this.timestamp});
+
+  /// true = mulai bergerak, false = berhenti bergerak
+  final bool status;
+  final DateTime? timestamp;
+
+  factory GasHistoryEntry.fromMap(Map<String, dynamic> map) {
+    return GasHistoryEntry(
+      status: map['status'] == true,
       timestamp: RollatorRecord._timestampToDateTime(map['timestamp']),
     );
   }

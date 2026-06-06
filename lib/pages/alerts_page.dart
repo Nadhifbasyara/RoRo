@@ -48,6 +48,8 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
   void _triggerSosAlert() {
     // Getaran panjang berulang
     Vibration.vibrate(pattern: [0, 500, 200, 500, 200, 500], repeat: 2);
+    // Langsung buka WhatsApp call otomatis
+    _callFamily(auto: true);
     // Tampilkan dialog
     _showSosDialog();
   }
@@ -70,7 +72,7 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
         triggeredAt: _sosTriggeredAt,
         onCallFamily: () {
           Navigator.of(ctx).pop();
-          _callFamily(context);
+          _callFamily();
         },
         onDismiss: () {
           Navigator.of(ctx).pop();
@@ -90,17 +92,57 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
     }
   }
 
-  static void _callFamily(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hubungi Keluarga'),
-        content: const Text('Menghubungi kontak darurat keluarga...'),
-        actions: [
-          FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
-        ],
-      ),
-    );
+  Future<void> _callFamily({bool auto = false}) async {
+    final contact = await EmergencyContactStore.load();
+
+    if (contact == null || contact.phone.isEmpty) {
+      if (!mounted) return;
+      // Kalau dipanggil otomatis saat SOS, jangan tampilkan dialog —
+      // user sudah lihat di SOS screen. Hanya tampilkan kalau manual.
+      if (!auto) {
+        showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Kontak Darurat Belum Diatur'),
+            content: const Text(
+              'Silakan tambahkan nomor kontak darurat di halaman Profile terlebih dahulu.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    // Normalisasi nomor ke format internasional untuk wa.me
+    // 08xxx → 628xxx, +628xxx → 628xxx, 628xxx → tetap
+    String normalized = contact.phone.trim().replaceAll(RegExp(r'[\s\-()]'), '');
+    if (normalized.startsWith('0')) {
+      normalized = '62${normalized.substring(1)}';
+    } else if (normalized.startsWith('+')) {
+      normalized = normalized.substring(1);
+    }
+
+    // wa.me/<nomor> — membuka WhatsApp dan langsung ke chat/call
+    final uri = Uri.parse('https://wa.me/$normalized');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (mounted) {
+      // Fallback ke dialer biasa jika WhatsApp tidak terinstall
+      final telUri = Uri(scheme: 'tel', path: contact.phone);
+      if (await canLaunchUrl(telUri)) {
+        await launchUrl(telUri);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Tidak dapat menghubungi ${contact.phone}')),
+        );
+      }
+    }
   }
 
   void _openSosHistory() {
@@ -191,7 +233,7 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () => _callFamily(context),
+              onPressed: () => _callFamily(),
               icon: const Icon(Icons.call, size: 22),
               label: const Text('HUBUNGI KELUARGA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
               style: FilledButton.styleFrom(

@@ -25,11 +25,18 @@ class _ProfilePageState extends State<ProfilePage> {
   String _selectedLanguage = 'English';
   String _displayName = 'John Doe';
   late Future<RollatorDeviceSession?> _deviceSessionFuture;
+  EmergencyContact? _emergencyContact;
 
   @override
   void initState() {
     super.initState();
     _deviceSessionFuture = RollatorSessionStore.loadDeviceSession();
+    _loadEmergencyContact();
+  }
+
+  Future<void> _loadEmergencyContact() async {
+    final contact = await EmergencyContactStore.load();
+    if (mounted) setState(() => _emergencyContact = contact);
   }
 
   @override
@@ -218,6 +225,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 sessionFuture: _deviceSessionFuture,
                 rollatorRepository: widget.rollatorRepository,
                 onTap: () => _openDeviceDetails(),
+              ),
+              const SizedBox(height: 22),
+              const _SectionLabel(title: 'KONTAK DARURAT SOS'),
+              const SizedBox(height: 12),
+              _EmergencyContactCard(
+                contact: _emergencyContact,
+                onTap: _openEditEmergencyContactSheet,
               ),
               const SizedBox(height: 22),
               const _SectionLabel(title: 'SECURITY & ACCOUNT'),
@@ -472,8 +486,30 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _openChangePasswordSheet() {
-    _openInfoSheet(
+  void _openEditEmergencyContactSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _EmergencyContactSheet(
+        initial: _emergencyContact,
+        onSaved: (contact) {
+          setState(() => _emergencyContact = contact);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Kontak darurat tersimpan.')),
+          );
+        },
+        onDeleted: () {
+          setState(() => _emergencyContact = null);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Kontak darurat dihapus.')),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openChangePasswordSheet() {    _openInfoSheet(
       'Change Password',
       'Password changes can be wired to Firebase Auth later. For now, this opens the interaction and confirms the action.',
       actionLabel: 'Request Reset',
@@ -818,6 +854,307 @@ class _CircleIconButton extends StatelessWidget {
           child: Icon(icon, color: const Color(0xFF1D4ED8), size: 22),
         ),
       ),
+    );
+  }
+}
+
+class _EmergencyContactSheet extends StatefulWidget {
+  const _EmergencyContactSheet({
+    required this.onSaved,
+    required this.onDeleted,
+    this.initial,
+  });
+
+  final EmergencyContact? initial;
+  final void Function(EmergencyContact) onSaved;
+  final VoidCallback onDeleted;
+
+  @override
+  State<_EmergencyContactSheet> createState() => _EmergencyContactSheetState();
+}
+
+class _EmergencyContactSheetState extends State<_EmergencyContactSheet> {
+  late final TextEditingController _nameCtrl =
+      TextEditingController(text: widget.initial?.name ?? '');
+  late final TextEditingController _phoneCtrl =
+      TextEditingController(text: widget.initial?.phone ?? '');
+  late final TextEditingController _relationCtrl =
+      TextEditingController(text: widget.initial?.relation ?? '');
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _relationCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                height: 4,
+                width: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1D5DB),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Kontak Darurat SOS',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Nomor ini akan dihubungi otomatis saat tombol SOS aktif.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF6B7280)),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _nameCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Nama',
+                hintText: 'contoh: Budi Santoso',
+                prefixIcon: const Icon(Icons.person_outline_rounded),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Nomor Telepon',
+                hintText: 'contoh: 08123456789',
+                prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _relationCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Hubungan',
+                hintText: 'contoh: Anak, Istri, Suami',
+                prefixIcon: const Icon(Icons.people_outline_rounded),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () async {
+                  final phone = _phoneCtrl.text.trim();
+                  if (phone.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Nomor telepon wajib diisi.')),
+                    );
+                    return;
+                  }
+                  final contact = EmergencyContact(
+                    name: _nameCtrl.text.trim(),
+                    phone: phone,
+                    relation: _relationCtrl.text.trim(),
+                  );
+                  await EmergencyContactStore.save(contact);
+                  if (!mounted) return;
+                  Navigator.of(context).pop();
+                  widget.onSaved(contact);
+                },
+                child: const Text('Simpan Kontak', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              ),
+            ),
+            if (widget.initial != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () async {
+                    await EmergencyContactStore.clear();
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                    widget.onDeleted();
+                  },
+                  child: const Text('Hapus Kontak', style: TextStyle(color: Color(0xFF9CA3AF))),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmergencyContactCard extends StatelessWidget {
+  const _EmergencyContactCard({required this.contact, required this.onTap});
+
+  final EmergencyContact? contact;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: contact != null ? const Color(0xFFFCA5A5) : const Color(0xFFE5E7EB),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: contact == null ? _buildEmpty(context) : _buildFilled(context),
+      ),
+    );
+  }
+
+  Widget _buildEmpty(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          height: 48,
+          width: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEE2E2),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 26),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Belum ada kontak darurat',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF374151),
+                    ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Tap untuk menambahkan nomor keluarga',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF9CA3AF),
+                    ),
+              ),
+            ],
+          ),
+        ),
+        const Icon(Icons.add_circle_rounded, color: Color(0xFFDC2626), size: 24),
+      ],
+    );
+  }
+
+  Widget _buildFilled(BuildContext context) {
+    final c = contact!;
+    return Row(
+      children: [
+        Container(
+          height: 52,
+          width: 52,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEE2E2),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 28),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (c.name.isNotEmpty)
+                Text(
+                  c.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF111827),
+                      ),
+                ),
+              const SizedBox(height: 3),
+              Text(
+                c.phone,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFFDC2626),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+              ),
+              if (c.relation.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  c.relation,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF6B7280),
+                      ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const Icon(Icons.edit_rounded, color: Color(0xFF9CA3AF), size: 20),
+      ],
     );
   }
 }

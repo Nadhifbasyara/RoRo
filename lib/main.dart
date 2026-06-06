@@ -15,8 +15,10 @@ import 'data/distance_repository.dart';
 import 'data/rollator_firmware_client.dart';
 import 'data/rollator_repository.dart';
 import 'data/rollator_session_store.dart';
+import 'data/emergency_contact_store.dart';
 import 'firebase_options.dart';
 import 'package:vibration/vibration.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 part 'pages/dashboard_page.dart';
 part 'pages/firmware_provisioning_page.dart';
@@ -150,6 +152,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final pages = [
       DashboardHome(
         distanceRepository: widget.distanceRepository,
+        rollatorRepository: widget.rollatorRepository,
         colorScheme: colorScheme,
       ),
       TrackerPage(
@@ -785,70 +788,146 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _OperatingModeCard extends StatelessWidget {
-  const _OperatingModeCard({required this.distanceRepository});
+  const _OperatingModeCard({
+    required this.distanceRepository,
+    required this.rollatorRepository,
+  });
 
   final DistanceRepository distanceRepository;
+  final RollatorRepository rollatorRepository;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<String>(
       stream: distanceRepository.watchOperatingMode(),
       initialData: 'assist',
-      builder: (context, snapshot) {
-        final selectedMode = _normalizeOperatingMode(snapshot.data);
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.settings_input_component_rounded,
-                    color: const Color(0xFF1550D4),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Current Operating Mode',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+      builder: (_, modeSnapshot) {
+        final selectedMode = _normalizeOperatingMode(modeSnapshot.data);
+        return StreamBuilder<bool>(
+          stream: rollatorRepository.watchGas(_kSosDocumentId),
+          initialData: false,
+          builder: (_, gasSnapshot) {
+            final isMoving = gasSnapshot.data ?? false;
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              _ModePill(
-                title: 'Assist (Uphill)',
-                icon: Icons.north_east_rounded,
-                selected: selectedMode == 'assist',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.settings_input_component_rounded, color: Color(0xFF1550D4), size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Current Operating Mode',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      // Tombol riwayat gas
+                      InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => _GasHistoryPage(rollatorRepository: rollatorRepository),
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.history_rounded, size: 16, color: Color(0xFF1550D4)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Riwayat',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: const Color(0xFF1550D4),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Gas status indicator
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isMoving ? const Color(0xFFECFDF5) : const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isMoving ? const Color(0xFF6EE7B7) : const Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // Animasi roda berputar
+                        AnimatedRotation(
+                          turns: isMoving ? 1 : 0,
+                          duration: const Duration(seconds: 1),
+                          child: Icon(
+                            Icons.motion_photos_on_rounded,
+                            color: isMoving ? const Color(0xFF059669) : const Color(0xFF9CA3AF),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isMoving ? 'SEDANG BERGERAK' : 'BERHENTI',
+                                style: TextStyle(
+                                  color: isMoving ? const Color(0xFF059669) : const Color(0xFF6B7280),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                              Text(
+                                isMoving ? 'Gas aktif — rollator sedang digunakan' : 'Gas tidak aktif',
+                                style: TextStyle(
+                                  color: isMoving ? const Color(0xFF059669).withOpacity(0.7) : const Color(0xFF9CA3AF),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Pulse dot
+                        if (isMoving)
+                          _PulseDot(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _ModePill(title: 'Assist (Uphill)', icon: Icons.north_east_rounded, selected: selectedMode == 'assist'),
+                  const SizedBox(height: 10),
+                  _ModePill(title: 'Brake (Downhill)', icon: Icons.south_east_rounded, selected: selectedMode == 'brake'),
+                  const SizedBox(height: 10),
+                  _ModePill(title: 'Idle (Flat)', icon: Icons.pause_rounded, selected: selectedMode == 'idle'),
+                ],
               ),
-              const SizedBox(height: 10),
-              _ModePill(
-                title: 'Brake (Downhill)',
-                icon: Icons.south_east_rounded,
-                selected: selectedMode == 'brake',
-              ),
-              const SizedBox(height: 10),
-              _ModePill(
-                title: 'Idle (Flat)',
-                icon: Icons.pause_rounded,
-                selected: selectedMode == 'idle',
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -918,6 +997,172 @@ class _ModePill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PulseDot extends StatefulWidget {
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _scale = Tween(begin: 0.7, end: 1.3).animate(
+    CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+  );
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: const BoxDecoration(
+          color: Color(0xFF10B981),
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class _GasHistoryPage extends StatelessWidget {
+  const _GasHistoryPage({required this.rollatorRepository});
+
+  final RollatorRepository rollatorRepository;
+
+  String _formatTimestamp(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    final s = dt.second.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    final mo = dt.month.toString().padLeft(2, '0');
+    return '$h:$m:$s — $d/$mo/${dt.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F9FF),
+      appBar: AppBar(
+        title: const Text('Riwayat Gas', style: TextStyle(fontWeight: FontWeight.w900)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF111827),
+        elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFE5E7EB)),
+        ),
+      ),
+      body: StreamBuilder<List<GasHistoryEntry>>(
+        stream: rollatorRepository.watchGasHistory(_kSosDocumentId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final entries = snapshot.data ?? [];
+          if (entries.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum ada riwayat gas',
+                    style: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            itemCount: entries.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final entry = entries[index];
+              final isMoving = entry.status;
+              final timeStr = entry.timestamp != null
+                  ? _formatTimestamp(entry.timestamp!)
+                  : 'Waktu tidak tersedia';
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isMoving ? const Color(0xFFECFDF5) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isMoving ? const Color(0xFF6EE7B7) : const Color(0xFFE5E7EB),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 40,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: isMoving
+                            ? const Color(0xFF10B981).withOpacity(0.12)
+                            : const Color(0xFF9CA3AF).withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isMoving ? Icons.directions_walk_rounded : Icons.pause_circle_rounded,
+                        color: isMoving ? const Color(0xFF059669) : const Color(0xFF9CA3AF),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isMoving ? 'Mulai Bergerak' : 'Berhenti Bergerak',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: isMoving ? const Color(0xFF059669) : const Color(0xFF374151),
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            timeStr,
+                            style: const TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
