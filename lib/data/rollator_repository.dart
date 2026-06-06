@@ -8,6 +8,12 @@ abstract class RollatorRepository {
   Future<RollatorClaimResult> claimCurrentUserToRollator(String rollatorCode);
   Future<void> unlinkCurrentUserFromRollator(String rollatorCode);
   Stream<RollatorRecord?> watchRollatorByCode(String rollatorCode);
+  /// Stream boolean SOS — emit true saat tombol ditekan, false saat direset.
+  Stream<bool> watchSos(String rollatorCode);
+  /// Reset field sos menjadi false di Firestore.
+  Future<void> clearSos(String rollatorCode);
+  /// Stream sosHistory dari document rollator.
+  Stream<List<SosHistoryEntry>> watchSosHistory(String rollatorCode);
 }
 
 class DemoRollatorRepository implements RollatorRepository {
@@ -57,6 +63,16 @@ class DemoRollatorRepository implements RollatorRepository {
       ),
     );
   }
+
+  @override
+  Stream<bool> watchSos(String rollatorCode) => Stream<bool>.value(false);
+
+  @override
+  Future<void> clearSos(String rollatorCode) async {}
+
+  @override
+  Stream<List<SosHistoryEntry>> watchSosHistory(String rollatorCode) =>
+      Stream<List<SosHistoryEntry>>.value(const []);
 }
 
 class FirebaseRollatorRepository implements RollatorRepository {
@@ -227,6 +243,44 @@ class FirebaseRollatorRepository implements RollatorRepository {
       return RollatorRecord.fromSnapshot(snapshot);
     });
   }
+
+  @override
+  Stream<bool> watchSos(String rollatorCode) {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return Stream<bool>.value(false);
+    return _rollators.doc(code).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      return data?['sos'] == true;
+    });
+  }
+
+  @override
+  Future<void> clearSos(String rollatorCode) async {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return;
+    await _rollators.doc(code).set(
+      {'sos': false, 'sosClearedAt': FieldValue.serverTimestamp()},
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
+  Stream<List<SosHistoryEntry>> watchSosHistory(String rollatorCode) {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return Stream<List<SosHistoryEntry>>.value(const []);
+    return _rollators.doc(code).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      final raw = data?['sosHistory'];
+      if (raw is! List) return <SosHistoryEntry>[];
+      final entries = raw
+          .whereType<Map<String, dynamic>>()
+          .map((e) => SosHistoryEntry.fromMap(e))
+          .where((e) => e.timestamp != null)
+          .toList()
+        ..sort((a, b) => b.timestamp!.compareTo(a.timestamp!));
+      return entries;
+    });
+  }
 }
 
 class RollatorRecord {
@@ -237,6 +291,8 @@ class RollatorRecord {
     this.createdAt,
     this.updatedAt,
     this.isOnline,
+    this.sos,
+    this.sosTriggeredAt,
   });
 
   final String code;
@@ -246,6 +302,10 @@ class RollatorRecord {
   final DateTime? updatedAt;
   /// null = belum ada data dari firmware
   final bool? isOnline;
+  /// true = tombol SOS sedang aktif
+  final bool? sos;
+  /// Waktu SOS terakhir ditekan
+  final DateTime? sosTriggeredAt;
 
   factory RollatorRecord.fromSnapshot(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data() ?? const <String, dynamic>{};
@@ -258,6 +318,8 @@ class RollatorRecord {
       createdAt: _timestampToDateTime(data['createdAt']),
       updatedAt: _timestampToDateTime(data['updatedAt']),
       isOnline: data['isOnline'] is bool ? data['isOnline'] as bool : false,
+      sos: data['sos'] is bool ? data['sos'] as bool : null,
+      sosTriggeredAt: _timestampToDateTime(data['sosTriggeredAt']),
     );
   }
 
@@ -294,4 +356,18 @@ class RollatorClaimResult {
   final bool success;
   final String message;
   final RollatorRecord? rollator;
+}
+
+class SosHistoryEntry {
+  const SosHistoryEntry({required this.sos, this.timestamp});
+
+  final bool sos;
+  final DateTime? timestamp;
+
+  factory SosHistoryEntry.fromMap(Map<String, dynamic> map) {
+    return SosHistoryEntry(
+      sos: map['sos'] == true,
+      timestamp: RollatorRecord._timestampToDateTime(map['timestamp']),
+    );
+  }
 }

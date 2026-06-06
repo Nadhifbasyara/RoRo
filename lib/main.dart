@@ -16,6 +16,7 @@ import 'data/rollator_firmware_client.dart';
 import 'data/rollator_repository.dart';
 import 'data/rollator_session_store.dart';
 import 'firebase_options.dart';
+import 'package:vibration/vibration.dart';
 
 part 'pages/dashboard_page.dart';
 part 'pages/firmware_provisioning_page.dart';
@@ -24,6 +25,7 @@ part 'pages/tracker_page.dart';
 part 'pages/profile_page.dart';
 part 'pages/alerts_page.dart';
 part 'pages/session_history_page.dart';
+part 'pages/education_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -154,7 +156,8 @@ class _DashboardPageState extends State<DashboardPage> {
         distanceRepository: widget.distanceRepository,
         colorScheme: colorScheme,
       ),
-      AlertsPage(colorScheme: colorScheme),
+      AlertsPage(colorScheme: colorScheme, rollatorRepository: widget.rollatorRepository),
+      EducationPage(colorScheme: colorScheme),
       ProfilePage(
         colorScheme: colorScheme,
         rollatorRepository: widget.rollatorRepository,
@@ -1312,7 +1315,6 @@ class _BottomNavBar extends StatelessWidget {
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _NavItem(
               icon: Icons.dashboard_rounded,
@@ -1333,10 +1335,16 @@ class _BottomNavBar extends StatelessWidget {
               onTap: () => onTabSelected(2),
             ),
             _NavItem(
-              icon: Icons.person_rounded,
-              label: 'Profile',
+              icon: Icons.menu_book_rounded,
+              label: 'Edukasi',
               selected: selectedIndex == 3,
               onTap: () => onTabSelected(3),
+            ),
+            _NavItem(
+              icon: Icons.person_rounded,
+              label: 'Profile',
+              selected: selectedIndex == 4,
+              onTap: () => onTabSelected(4),
             ),
           ],
         ),
@@ -1361,29 +1369,34 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? const Color(0xFF1550D4) : const Color(0xFF9CA3AF);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEAF0FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              label.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.4,
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFEAF0FF) : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.2,
+                  fontSize: 9,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
