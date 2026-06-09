@@ -1,4 +1,4 @@
-part of roro_main;
+﻿part of roro_main;
 
 class RehabSession {
   final String title;
@@ -169,7 +169,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
           _selectedMonth = monthCode;
         });
       },
-      selectedColor: const Color(0xFF1D4ED8),
+      selectedColor: const Color(0xFFDC2626),
       backgroundColor: Colors.white,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : const Color(0xFF4B5563),
@@ -178,7 +178,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFFE5E7EB),
+          color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFE5E7EB),
         ),
       ),
       showCheckmark: false,
@@ -195,7 +195,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
           _selectedDay = dayCode;
         });
       },
-      selectedColor: const Color(0xFF1D4ED8),
+      selectedColor: const Color(0xFFDC2626),
       backgroundColor: Colors.white,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : const Color(0xFF4B5563),
@@ -204,7 +204,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFFE5E7EB),
+          color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFE5E7EB),
         ),
       ),
       showCheckmark: false,
@@ -321,7 +321,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFF1D4ED8), width: 1.5),
+                    borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
                   ),
                 ),
               ),

@@ -1,4 +1,4 @@
-part of roro_main;
+﻿part of roro_main;
 
 class TrackerPage extends StatelessWidget {
   const TrackerPage({super.key, required this.distanceRepository, required this.colorScheme});
@@ -55,7 +55,7 @@ class TrackerPage extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2F6BFF),
+                    color: const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(

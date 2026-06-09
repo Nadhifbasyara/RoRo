@@ -1,4 +1,4 @@
-part of roro_main;
+﻿part of roro_main;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -149,7 +149,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               height: 38,
                               width: 38,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1D4ED8),
+                                color: const Color(0xFFDC2626),
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: Colors.white,
@@ -158,7 +158,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 boxShadow: [
                                   BoxShadow(
                                     color: const Color(
-                                      0xFF1D4ED8,
+                                      0xFFDC2626,
                                     ).withOpacity(0.28),
                                     blurRadius: 12,
                                     offset: const Offset(0, 6),
@@ -192,7 +192,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8F0FF),
+                        color: const Color(0xFFFEE2E2),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Row(
@@ -208,7 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             'PRIMARY CAREGIVER',
                             style: Theme.of(context).textTheme.labelLarge
                                 ?.copyWith(
-                                  color: const Color(0xFF1D4ED8),
+                                  color: const Color(0xFFDC2626),
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.0,
                                 ),
@@ -292,7 +292,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     trailing: Text(
                       _selectedLanguage,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: const Color(0xFF1D4ED8),
+                        color: const Color(0xFFDC2626),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -591,10 +591,10 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEAF0FF) : const Color(0xFFF8FAFC),
+          color: selected ? const Color(0xFFFFF1F2) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? const Color(0xFF1D4ED8) : const Color(0xFFE5E7EB),
+            color: selected ? const Color(0xFFDC2626) : const Color(0xFFE5E7EB),
           ),
         ),
         child: Row(
@@ -607,7 +607,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             if (selected)
-              const Icon(Icons.check_circle_rounded, color: Color(0xFF1D4ED8)),
+              const Icon(Icons.check_circle_rounded, color: Color(0xFFDC2626)),
           ],
         ),
       ),
@@ -851,7 +851,7 @@ class _CircleIconButton extends StatelessWidget {
         child: SizedBox(
           height: 42,
           width: 42,
-          child: Icon(icon, color: const Color(0xFF1D4ED8), size: 22),
+          child: Icon(icon, color: const Color(0xFFDC2626), size: 22),
         ),
       ),
     );
@@ -1461,7 +1461,7 @@ class _DeviceInfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: const Color(0xFF2563EB)),
+          Icon(icon, size: 15, color: const Color(0xFFDC2626)),
           const SizedBox(width: 6),
           Flexible(
             child: Text(

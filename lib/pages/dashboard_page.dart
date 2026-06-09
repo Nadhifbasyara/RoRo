@@ -38,10 +38,6 @@ class DashboardHome extends StatelessWidget {
               _FireStreakCard(
                 distanceRepository: distanceRepository,
               ),
-              const SizedBox(height: 18),
-              _DistanceMetricCard(
-                distanceRepository: distanceRepository,
-              ),
               const SizedBox(height: 14),
               _WalkingTimeMetricCard(
                 distanceRepository: distanceRepository,

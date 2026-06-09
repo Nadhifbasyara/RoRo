@@ -1,4 +1,4 @@
-part of roro_main;
+﻿part of roro_main;
 
 class EducationPage extends StatefulWidget {
   const EducationPage({super.key, required this.colorScheme});
@@ -18,7 +18,7 @@ class _EducationPageState extends State<EducationPage> {
       id: 'latihan-fisik',
       category: 'Latihan Fisik',
       categoryIcon: Icons.directions_walk_rounded,
-      categoryColor: Color(0xFF3B82F6),
+      categoryColor: Color(0xFFF87171),
       title: 'Panduan Latihan Fisik Pasca Stroke',
       description:
           'Panduan mobilitas harian dan latihan motorik halus untuk mempercepat kemandirian fisik.',
@@ -174,7 +174,7 @@ class _EducationPageState extends State<EducationPage> {
                         Text(
                           'Lihat Semua',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: const Color(0xFF1D4ED8),
+                                color: const Color(0xFFDC2626),
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
@@ -265,12 +265,12 @@ class _FeaturedCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1D4ED8), Color(0xFF1E40AF)],
+          colors: [Color(0xFFDC2626), Color(0xFF991B1B)],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1D4ED8).withOpacity(0.3),
+            color: const Color(0xFFDC2626).withOpacity(0.3),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -328,12 +328,12 @@ class _FeaturedCard extends StatelessWidget {
                   Text(
                     'Buka di Google Drive',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: const Color(0xFF1D4ED8),
+                          color: const Color(0xFFDC2626),
                           fontWeight: FontWeight.w900,
                         ),
                   ),
                   const SizedBox(width: 6),
-                  const Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF1D4ED8)),
+                  const Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFFDC2626)),
                 ],
               ),
             ),
@@ -433,9 +433,9 @@ class _DailyInsightCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
+        color: const Color(0xFFFFF5F5),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,7 +447,7 @@ class _DailyInsightCard extends StatelessWidget {
                 Text(
                   'INSIGHT HARIAN',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF1D4ED8),
+                        color: const Color(0xFFDC2626),
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
                       ),
@@ -457,7 +457,7 @@ class _DailyInsightCard extends StatelessWidget {
                   '"Setiap langkah kecil adalah kemenangan besar."',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF1E3A8A),
+                        color: const Color(0xFF7F1D1D),
                         height: 1.4,
                         fontStyle: FontStyle.italic,
                       ),
@@ -470,10 +470,10 @@ class _DailyInsightCard extends StatelessWidget {
             height: 48,
             width: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFF1D4ED8).withOpacity(0.1),
+              color: const Color(0xFFDC2626).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.lightbulb_rounded, color: Color(0xFF1D4ED8), size: 26),
+            child: const Icon(Icons.lightbulb_rounded, color: Color(0xFFDC2626), size: 26),
           ),
         ],
       ),
@@ -492,36 +492,67 @@ class _ArticleDetailPage extends StatelessWidget {
   static const Map<String, List<_ArticleSection>> _content = {
     'latihan-fisik': [
       _ArticleSection(
-        heading: 'Mengapa Latihan Fisik Penting?',
+        heading: 'Mengapa Latihan Fisik Pasca-Stroke Sangat Penting?',
         body:
-            'Latihan fisik secara rutin membantu otak membentuk jalur saraf baru melalui neuroplastisitas. Dimulai dari gerakan ringan, intensitas dapat ditingkatkan seiring waktu.',
+            '💡 Memicu Neuroplastisitas\nGerakan yang dilakukan secara berulang merangsang otak untuk membuat jalur saraf baru guna menggantikan jalur yang rusak.\n\n'
+            '💪 Mencegah Atrofi Otot\nAnggota tubuh yang jarang digerakkan akan mengalami penyusutan otot (atrofi) dan kaku sendi (kontraktur).\n\n'
+            '⚖️ Meningkatkan Keseimbangan dan Koordinasi\nMembantu mengurangi risiko terjatuh dan mengembalikan kemandirian beraktivitas seperti berjalan atau makan.\n\n'
+            '❤️ Kesehatan Jantung dan Pembuluh Darah\nMenurunkan risiko stroke berulang dengan cara mengontrol tekanan darah dan kolesterol.\n\n'
+            '🧠 Kesehatan Mental\nLatihan fisik melepaskan hormon endorfin yang membantu mengurangi risiko depresi dan kecemasan yang sering dialami pasien pasca-stroke.',
       ),
       _ArticleSection(
-        heading: 'Program Latihan Minggu Pertama',
+        heading: 'Contoh Program Latihan Mingguan',
         body:
-            '• Rentangkan jari tangan 10× pagi dan sore\n• Angkat tumit sambil duduk 2 set × 15 ulangan\n• Berjalan di dalam rumah dengan pendamping minimal 10 menit',
+            'Catatan: Program ini dirancang untuk pasien yang sudah stabil secara medis dan memiliki kemampuan mobilitas mandiri minimal (bisa berdiri dengan bantuan). Intensitas harus disesuaikan dengan rekomendasi dokter atau fisioterapis.\n\n'
+            '📅 Senin — Aerobik & Kardio Ringan\nBerjalan kaki (treadmill/halaman), bersepeda statis. Durasi: 20–30 menit.\n\n'
+            '📅 Selasa — Penguatan Otot (Strength)\nSit-to-stand, jinjit (calf raises), latihan genggaman tangan dengan bola terapi. Durasi: 15–20 menit.\n\n'
+            '📅 Rabu — Fleksibilitas & Keseimbangan\nPeregangan seluruh tubuh, berdiri satu kaki (sambil berpegangan), Yoga/Tai Chi adaptif. Durasi: 20 menit.\n\n'
+            '📅 Kamis — Istirahat Aktif\nJalan santai atau latihan motorik halus: menyusun balok, menulis, mengancingkan baju. Sesuai kemampuan.\n\n'
+            '📅 Jumat — Penguatan Otot (Strength)\nLatihan sisi tubuh yang lemah dengan resistance band ringan atau beban 0.5 kg. Durasi: 15–20 menit.\n\n'
+            '📅 Sabtu — Aerobik & Keseimbangan\nBerjalan dengan variasi arah (maju, mundur, menyamping) di bawah pengawasan, atau bersepeda statis. Durasi: 20–30 menit.\n\n'
+            '📅 Minggu — Istirahat Total\nPemulihan otot dan relaksasi.',
       ),
       _ArticleSection(
-        heading: 'Tips Keamanan',
+        heading: 'Tips Keamanan Utama (Wajib Diperhatikan)',
         body:
-            'Selalu ada pendamping saat latihan. Hentikan jika muncul nyeri dada, pusing hebat, atau sesak napas. Laporkan perkembangan ke terapis setiap minggu.',
+            'Keamanan adalah prioritas nomor satu. Pasien stroke memiliki risiko jatuh yang lebih tinggi dan perubahan sensorik pada tubuh.\n\n'
+            '✅ Dapatkan Lampu Hijau dari Dokter\nJangan memulai program latihan apa pun sebelum berkonsultasi dengan dokter spesialis saraf atau dokter rehabilitasi medik.\n\n'
+            '👥 Selalu Gunakan Pengawasan\nTerutama di bulan-bulan awal, lakukan latihan di dekat dinding, menggunakan kursi yang stabil, atau didampingi keluarga/fisioterapis.\n\n'
+            '⚠️ Aturan "Sisi yang Lemah"\nSelalu perhatikan posisi sendi pada sisi tubuh yang lemah. Jangan menarik atau memaksakan sendi bahu atau pergelangan kaki secara kasar karena rentan dislokasi.\n\n'
+            '🛑 Dengarkan Tubuh Anda\nKelelahan ekstrem justru menghambat neuroplastisitas. Jika merasa pusing, nyeri dada, sesak napas, atau nyeri sendi tajam — segera hentikan latihan.\n\n'
+            '👟 Gunakan Alas Kaki yang Tepat\nSelalu gunakan sepatu olahraga yang stabil, tidak licin, dan menopang pergelangan kaki. Hindari berjalan hanya menggunakan kaus kaki di lantai licin.',
       ),
     ],
     'nutrisi': [
       _ArticleSection(
-        heading: 'Prinsip Diet Pasca Stroke',
+        heading: 'Prinsip Diet Pasca-Stroke',
         body:
-            'Konsumsi makanan rendah garam (<2g/hari), tinggi serat, dan hindari lemak jenuh. Fokus pada sayuran hijau, ikan berlemak, dan buah-buahan segar.',
+            'Diet yang paling sering disarankan adalah Diet Mediterania atau Diet DASH (Dietary Approaches to Stop Hypertension). Prinsip utamanya:\n\n'
+            '🧂 Batasi Natrium (Garam)\nMaksimal 1 sendok teh garam per hari (sekitar 1.500–2.000 mg natrium). Krusial untuk menjaga tekanan darah tetap stabil.\n\n'
+            '🥑 Pilih Lemak Sehat\nHindari lemak trans dan jenuh (gorengan, santan kental, daging berlemak). Ganti dengan lemak tak jenuh dari minyak zaitun, alpukat, dan ikan berlemak.\n\n'
+            '🥦 Tinggi Serat dan Antioksidan\nPerbanyak sayur dan buah berwarna-warni untuk melawan radikal bebas dan menjaga kesehatan pembuluh darah.\n\n'
+            '🌾 Karbohidrat Kompleks\nPilih makanan dengan indeks glikemik rendah seperti nasi merah, oat, atau ubi jalar untuk menjaga gula darah.\n\n'
+            '⚠️ Perhatikan Tekstur Makanan\nJika pasien mengalami disfagia (kesulitan menelan), tekstur makanan harus disesuaikan — mulai dari makanan yang dicincang halus, disaring (puree), hingga tekstur biasa, sesuai rekomendasi dokter.',
       ),
       _ArticleSection(
-        heading: 'Contoh Menu Harian',
+        heading: 'Contoh Menu Harian (Tekstur Normal)',
         body:
-            'Pagi: Oatmeal + pisang + teh hijau\nSiang: Nasi merah + ikan kukus + sayur bayam\nMalam: Sup brokoli + dada ayam tanpa kulit\nCamilan: Kacang almond atau buah potong',
+            'Menu ini dirancang seimbang, rendah garam, dan kaya nutrisi pelindung otak (neuroprotektif).\n\n'
+            '🌅 Sarapan (07.00)\nOatmeal dengan susu rendah lemak, topping pisang dan kacang almond.\nManfaat: Tinggi serat, kalium dari pisang untuk kontrol tensi, dan lemak sehat.\n\n'
+            '🍎 Selingan Pagi (10.00)\n1 potong pepaya atau apel segar.\nManfaat: Sumber antioksidan dan melancarkan pencernaan.\n\n'
+            '🍱 Makan Siang (13.00)\nNasi merah, ikan kembung/salmon panggang (dibumbui herbal, minimal garam), tumis bayam wortel dengan sedikit minyak zaitun.\nManfaat: Ikan kembung kaya Omega-3 yang sangat baik untuk regenerasi sel otak.\n\n'
+            '🍇 Selingan Sore (16.00)\nAnggur, buah beri, atau 1 mangkuk kecil plain greek yogurt rendah gula.\nManfaat: Menjaga energi tanpa lonjakan gula darah.\n\n'
+            '🍲 Makan Malam (19.00)\nSup ayam bening (dada tanpa kulit, kentang, buncis, brokoli) dengan tahu tim.\nManfaat: Protein tinggi untuk perbaikan jaringan, mudah dicerna sebelum tidur.',
       ),
       _ArticleSection(
-        heading: 'Suplemen yang Direkomendasikan',
+        heading: 'Suplemen yang Sering Direkomendasikan',
         body:
-            'Konsultasikan dengan dokter sebelum mengonsumsi suplemen. Omega-3 dan vitamin D umumnya direkomendasikan, namun dosis harus disesuaikan kondisi pasien.',
+            '⚠️ Catatan Penting: Suplemen sifatnya tambahan, bukan pengganti makanan utama. Wajib dikonsultasikan ke dokter karena beberapa suplemen dapat berinteraksi dengan obat pengencer darah yang biasa dikonsumsi pasien stroke.\n\n'
+            '🐟 Asam Lemak Omega-3 (Minyak Ikan)\nMembantu mengurangi peradangan pada pembuluh darah, menurunkan trigliserida, dan mendukung neuroplastisitas otak.\n\n'
+            '💊 Vitamin B Kompleks (B6, B9/Asam Folat, B12)\nMenurunkan kadar homosistein yang jika terlalu tinggi dapat meningkatkan risiko stroke berulang, serta menjaga kesehatan sistem saraf.\n\n'
+            '☀️ Vitamin D\nBanyak pasien stroke ditemukan kekurangan vitamin D. Penting untuk kesehatan otot, tulang (mencegah osteoporosis jika mobilitas menurun), dan fungsi kognitif.\n\n'
+            '🧪 Citicoline / Coenzyme Q10 (CoQ10)\nSering diresepkan dokter saraf pada fase pemulihan. Citicoline melindungi jaringan otak (neuroprotectant), CoQ10 membantu produksi energi sel dan kesehatan jantung.\n\n'
+            '🚨 Peringatan Keamanan\nJika pasien mengonsumsi obat pengencer darah (Warfarin, Clopidogrel, atau Aspirin), suplemen seperti minyak ikan dosis tinggi, Vitamin E, atau ginkgo biloba bisa meningkatkan risiko pendarahan. Pastikan dokter mengetahui semua suplemen yang hendak dikonsumsi.',
       ),
     ],
     'mental': [

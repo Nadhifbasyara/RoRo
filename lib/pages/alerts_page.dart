@@ -1,4 +1,4 @@
-part of roro_main;
+﻿part of roro_main;
 
 // Document ID spesifik yang ditetapkan tim hardware
 const _kSosDocumentId = '471grmOw38iBx5v5m9uC';
@@ -348,8 +348,8 @@ class _AlertsPageState extends State<AlertsPage> with WidgetsBindingObserver {
               icon: const Icon(Icons.history_rounded),
               label: const Text('Lihat Riwayat SOS', style: TextStyle(fontWeight: FontWeight.w800)),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1D4ED8),
-                side: const BorderSide(color: Color(0xFF1D4ED8)),
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFDC2626)),
                 minimumSize: const Size.fromHeight(50),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -682,7 +682,7 @@ class _CriticalAlertTile extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: onCheck,
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1550D4)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
               child: const Text('Check on Patient'),
             ),
           ),
@@ -727,7 +727,7 @@ class _SafetyToggleState extends State<_SafetyToggle> {
             height: 44,
             width: 44,
             decoration: BoxDecoration(color: const Color(0xFFF8FAFF), borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.notifications_none_rounded, color: Color(0xFF1550D4)),
+            child: const Icon(Icons.notifications_none_rounded, color: Color(0xFFDC2626)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -740,7 +740,7 @@ class _SafetyToggleState extends State<_SafetyToggle> {
               ],
             ),
           ),
-          Switch.adaptive(value: _value, onChanged: (v) => setState(() => _value = v), activeColor: const Color(0xFF1550D4)),
+          Switch.adaptive(value: _value, onChanged: (v) => setState(() => _value = v), activeColor: const Color(0xFFDC2626)),
         ],
       ),
     );

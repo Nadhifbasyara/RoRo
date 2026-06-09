@@ -1,4 +1,4 @@
-library roro_main;
+﻿library roro_main;
 
 import 'dart:math';
 import 'dart:typed_data';
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
     final baseTheme = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF0F4FDB),
+        seedColor: const Color(0xFFB91C1C),
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: const Color(0xFFF6F8FC),
@@ -248,7 +248,7 @@ class _DistanceMetricCard extends StatelessWidget {
         final meters = snapshot.data ?? 0;
         return _MetricCard(
           icon: Icons.route_rounded,
-          accent: const Color(0xFF1E5BFF),
+          accent: const Color(0xFFEF4444),
           title: 'DISTANCE TODAY',
           value: _formatThousands(meters),
           suffix: 'Meters',
@@ -272,7 +272,7 @@ class _WalkingTimeMetricCard extends StatelessWidget {
         final minutes = snapshot.data ?? 0;
         return _MetricCard(
           icon: Icons.timer_rounded,
-          accent: const Color(0xFF3B82F6),
+          accent: const Color(0xFFF87171),
           title: 'WALKING TIME',
           value: _formatThousands(minutes),
           suffix: 'Minutes',
@@ -649,7 +649,7 @@ class _ActionButton extends StatelessWidget {
         boxShadow: [
           if (background != Colors.white)
             BoxShadow(
-              color: const Color(0xFF1550D4).withOpacity(0.25),
+              color: const Color(0xFFDC2626).withOpacity(0.25),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -827,7 +827,7 @@ class _OperatingModeCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.settings_input_component_rounded, color: Color(0xFF1550D4), size: 20),
+                      const Icon(Icons.settings_input_component_rounded, color: Color(0xFFDC2626), size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -848,12 +848,12 @@ class _OperatingModeCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.history_rounded, size: 16, color: Color(0xFF1550D4)),
+                              const Icon(Icons.history_rounded, size: 16, color: Color(0xFFDC2626)),
                               const SizedBox(width: 4),
                               Text(
                                 'Riwayat',
                                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: const Color(0xFF1550D4),
+                                  color: const Color(0xFFDC2626),
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -919,10 +919,6 @@ class _OperatingModeCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _ModePill(title: 'Assist (Uphill)', icon: Icons.north_east_rounded, selected: selectedMode == 'assist'),
-                  const SizedBox(height: 10),
-                  _ModePill(title: 'Brake (Downhill)', icon: Icons.south_east_rounded, selected: selectedMode == 'brake'),
-                  const SizedBox(height: 10),
                   _ModePill(title: 'Idle (Flat)', icon: Icons.pause_rounded, selected: selectedMode == 'idle'),
                 ],
               ),
@@ -959,13 +955,13 @@ class _ModePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final background = selected
-        ? const Color(0xFFDCE5FF)
+        ? const Color(0xFFFFE4E6)
         : const Color(0xFFF3F5F8);
     final textColor = selected
-        ? const Color(0xFF123FD6)
+        ? const Color(0xFFB91C1C)
         : const Color(0xFF374151);
     final dotColor = selected
-        ? const Color(0xFF6F8EEB)
+        ? const Color(0xFFFC8181)
         : const Color(0xFF8A95A6);
 
     return Container(
@@ -1439,7 +1435,7 @@ class _InsightsCard extends StatelessWidget {
                 'WEEKLY\nREPORT',
                 textAlign: TextAlign.right,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: const Color(0xFF1550D4),
+                  color: const Color(0xFFDC2626),
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.6,
                 ),
@@ -1461,7 +1457,7 @@ class _InsightsCard extends StatelessWidget {
               _InsightTile(
                 label: 'AVG SPEED',
                 value: '0.8 m/s',
-                color: Color(0xFF1550D4),
+                color: Color(0xFFDC2626),
               ),
               _InsightTile(
                 label: 'STABILITY',
@@ -1476,7 +1472,7 @@ class _InsightsCard extends StatelessWidget {
               _InsightTile(
                 label: 'REST STOPS',
                 value: '3 Today',
-                color: Color(0xFF3B82F6),
+                color: Color(0xFFF87171),
               ),
             ],
           ),
@@ -1613,7 +1609,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF1550D4) : const Color(0xFF9CA3AF);
+    final color = selected ? const Color(0xFFDC2626) : const Color(0xFF9CA3AF);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -1621,7 +1617,7 @@ class _NavItem extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFEAF0FF) : Colors.transparent,
+            color: selected ? const Color(0xFFFFF1F2) : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -1702,7 +1698,7 @@ class _TrackerWeeklyTotalCard extends StatelessWidget {
                         kilometers.toStringAsFixed(1),
                         style: Theme.of(context).textTheme.displayMedium
                             ?.copyWith(
-                              color: const Color(0xFF1D4ED8),
+                              color: const Color(0xFFDC2626),
                               fontWeight: FontWeight.w900,
                               letterSpacing: -1.2,
                             ),
@@ -2106,7 +2102,7 @@ class _TrackerRehabScoreCard extends StatelessWidget {
                     height: 10,
                     width: 10,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF1D4ED8),
+                      color: Color(0xFFDC2626),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -2143,7 +2139,7 @@ class _TrackerRehabScoreCard extends StatelessWidget {
               Text(
                 'THU',
                 style: TextStyle(
-                  color: Color(0xFF1D4ED8),
+                  color: Color(0xFFDC2626),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -2173,7 +2169,7 @@ class _SimpleLineChartPainter extends CustomPainter {
     }
 
     final linePaint = Paint()
-      ..color = const Color(0xFF1D4ED8)
+      ..color = const Color(0xFFDC2626)
       ..strokeWidth = 4
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -2202,7 +2198,7 @@ class _SimpleLineChartPainter extends CustomPainter {
 
     canvas.drawPath(path, linePaint);
 
-    final pointPaint = Paint()..color = const Color(0xFF1D4ED8);
+    final pointPaint = Paint()..color = const Color(0xFFDC2626);
     final points = [
       Offset(size.width * 0.08, size.height * 0.72),
       Offset(size.width * 0.44, size.height * 0.56),
@@ -2264,7 +2260,7 @@ class _TrackerSessionHistoryCard extends StatelessWidget {
                     child: Text(
                       'View All',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF1D4ED8),
+                        color: const Color(0xFFDC2626),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -2318,12 +2314,12 @@ class _SessionRow extends StatelessWidget {
             height: 48,
             width: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF1FF),
+              color: const Color(0xFFFFF1F2),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.directions_walk_rounded,
-              color: Color(0xFF1D4ED8),
+              color: Color(0xFFDC2626),
             ),
           ),
           const SizedBox(width: 12),
@@ -2413,7 +2409,7 @@ class _SimpleComingSoonPage extends StatelessWidget {
                 const Icon(
                   Icons.construction_rounded,
                   size: 54,
-                  color: Color(0xFF1D4ED8),
+                  color: Color(0xFFDC2626),
                 ),
                 const SizedBox(height: 14),
                 Text(
