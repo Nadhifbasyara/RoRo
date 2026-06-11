@@ -16,11 +16,11 @@ abstract class RollatorRepository {
   Stream<List<SosHistoryEntry>> watchSosHistory(String rollatorCode);
   /// Stream status gas realtime — true = sedang ditekan/berjalan.
   Stream<bool> watchGas(String rollatorCode);
-  /// Stream riwayat gas dari sub-collection 'gas', terbaru di atas.
-  Stream<List<GasHistoryEntry>> watchGasHistory(String rollatorCode);
-}
-
-class DemoRollatorRepository implements RollatorRepository {
+  /// Stream status IMU realtime — 'jalan', 'diam', atau 'offline'.
+  Stream<ImuStatus> watchImuStatus(String rollatorCode);
+  /// Stream data IMU lengkap dari dokumen rollator utama.
+  Stream<ImuData> watchImuData(String rollatorCode);
+  /// Stream riwayat ository implements RollatorRepository {
   const DemoRollatorRepository();
 
   @override
@@ -84,6 +84,14 @@ class DemoRollatorRepository implements RollatorRepository {
   @override
   Stream<List<GasHistoryEntry>> watchGasHistory(String rollatorCode) =>
       Stream<List<GasHistoryEntry>>.value(const []);
+
+  @override
+  Stream<ImuStatus> watchImuStatus(String rollatorCode) =>
+      Stream<ImuStatus>.value(ImuStatus.diam);
+
+  @override
+  Stream<ImuData> watchImuData(String rollatorCode) =>
+      Stream<ImuData>.value(ImuData.offline());
 }
 
 class FirebaseRollatorRepository implements RollatorRepository {
@@ -315,6 +323,30 @@ class FirebaseRollatorRepository implements RollatorRepository {
             .map((doc) => GasHistoryEntry.fromMap(doc.data()))
             .toList());
   }
+
+  @override
+  Stream<ImuStatus> watchImuStatus(String rollatorCode) {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return Stream<ImuStatus>.value(ImuStatus.offline);
+    return _rollators.doc(code).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return ImuStatus.offline;
+      return _parseImuStatus(data['imuStatus']);
+    });
+  }
+
+  @override
+  Stream<ImuData> watchImuData(String rollatorCode) {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return Stream<ImuData>.value(ImuData.offline());
+    return _rollators.doc(code).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null || !data.containsKey('imuStatus')) {
+        return ImuData.offline();
+      }
+      return ImuData.fromMap(data);
+    });
+  }
 }
 
 class RollatorRecord {
@@ -417,6 +449,62 @@ class GasHistoryEntry {
     return GasHistoryEntry(
       status: map['status'] == true,
       timestamp: RollatorRecord._timestampToDateTime(map['timestamp']),
+    );
+  }
+}
+
+enum ImuStatus { jalan, diam, offline }
+
+ImuStatus _parseImuStatus(dynamic raw) {
+  switch (raw?.toString().trim().toLowerCase()) {
+    case 'jalan':
+      return ImuStatus.jalan;
+    case 'diam':
+      return ImuStatus.diam;
+    default:
+      return ImuStatus.offline;
+  }
+}
+
+class ImuData {
+  const ImuData({
+    required this.status,
+    required this.berjalan,
+    required this.connected,
+    this.pitch,
+    this.roll,
+    this.motionScore,
+    this.updatedAtMs,
+  });
+
+  final ImuStatus status;
+  final bool berjalan;
+  final bool connected;
+  final double? pitch;
+  final double? roll;
+  final double? motionScore;
+  final int? updatedAtMs;
+
+  /// True saat sensor terhubung dan ada data valid.
+  bool get isAvailable => connected && status != ImuStatus.offline;
+
+  factory ImuData.offline() => const ImuData(
+        status: ImuStatus.offline,
+        berjalan: false,
+        connected: false,
+      );
+
+  factory ImuData.fromMap(Map<String, dynamic> data) {
+    return ImuData(
+      status: _parseImuStatus(data['imuStatus']),
+      berjalan: data['imuBerjalan'] == true,
+      connected: data['imuConnected'] == true,
+      pitch: (data['imuPitch'] as num?)?.toDouble(),
+      roll: (data['imuRoll'] as num?)?.toDouble(),
+      motionScore: (data['imuMotionScore'] as num?)?.toDouble(),
+      updatedAtMs: data['imuUpdatedAtMs'] is int
+          ? data['imuUpdatedAtMs'] as int
+          : null,
     );
   }
 }

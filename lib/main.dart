@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -282,22 +283,67 @@ class _WalkingTimeMetricCard extends StatelessWidget {
   }
 }
 
-class _FireStreakCard extends StatelessWidget {
+class _FireStreakCard extends StatefulWidget {
   const _FireStreakCard({required this.distanceRepository});
 
   final DistanceRepository distanceRepository;
 
   @override
+  State<_FireStreakCard> createState() => _FireStreakCardState();
+}
+
+class _FireStreakCardState extends State<_FireStreakCard> {
+  Timer? _midnightTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleMidnightReset();
+  }
+
+  // Jadwalkan timer yang jalan tepat saat tengah malam lokal.
+  // Saat timer jalan, reset hasWalkedToday di Firestore lalu
+  // jadwalkan ulang untuk malam berikutnya.
+  void _scheduleMidnightReset() {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    final duration = midnight.difference(now);
+
+    _midnightTimer = Timer(duration, () async {
+      await _resetWalkedToday();
+      if (mounted) _scheduleMidnightReset();
+    });
+  }
+
+  Future<void> _resetWalkedToday() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('dashboard')
+          .doc('albert')
+          .set({'hasWalkedToday': false}, SetOptions(merge: true));
+      debugPrint('_FireStreakCard: hasWalkedToday di-reset (tengah malam).');
+    } catch (e) {
+      debugPrint('_FireStreakCard: gagal reset — $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _midnightTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<bool>(
-      stream: distanceRepository.watchHasWalkedToday(),
+      stream: widget.distanceRepository.watchHasWalkedToday(),
       initialData: true,
       builder: (context, walkedSnapshot) {
         final hasWalkedToday = walkedSnapshot.data ?? false;
         return StreamBuilder<int>(
-          stream: distanceRepository.watchWalkStreakDays(),
+          stream: widget.distanceRepository.watchWalkStreakDays(),
           initialData: hasWalkedToday ? 1 : 0,
-          builder: (context, streakSnapshot) {
+          builder: (_, streakSnapshot) {
             final streakDays = streakSnapshot.data ?? 0;
             final background = hasWalkedToday
                 ? const [Color(0xFFEF4444), Color(0xFFF97316)]
@@ -403,7 +449,7 @@ class _FireStreakCard extends StatelessWidget {
                                 ? null
                                 : () async {
                                     try {
-                                      await distanceRepository
+                                      await widget.distanceRepository
                                           .markWalkedToday();
                                       if (!context.mounted) {
                                         return;
@@ -808,120 +854,126 @@ class _OperatingModeCard extends StatelessWidget {
           initialData: false,
           builder: (_, gasSnapshot) {
             final isMoving = gasSnapshot.data ?? false;
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.settings_input_component_rounded, color: Color(0xFFDC2626), size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Current Operating Mode',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      // Tombol riwayat gas
-                      InkWell(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => _GasHistoryPage(rollatorRepository: rollatorRepository),
-                          ),
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.history_rounded, size: 16, color: Color(0xFFDC2626)),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Riwayat',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: const Color(0xFFDC2626),
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+            return StreamBuilder<ImuData>(
+              stream: rollatorRepository.watchImuData(_kSosDocumentId),
+              initialData: ImuData.offline(),
+              builder: (_, imuSnapshot) {
+                final imu = imuSnapshot.data ?? ImuData.offline();
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  // Gas status indicator
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isMoving ? const Color(0xFFECFDF5) : const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isMoving ? const Color(0xFF6EE7B7) : const Color(0xFFE5E7EB),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.settings_input_component_rounded, color: Color(0xFFDC2626), size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Current Operating Mode',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          // Tombol riwayat gas
+                          InkWell(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => _GasHistoryPage(rollatorRepository: rollatorRepository),
+                              ),
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.history_rounded, size: 16, color: Color(0xFFDC2626)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Riwayat',
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: const Color(0xFFDC2626),
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        // Animasi roda berputar
-                        AnimatedRotation(
-                          turns: isMoving ? 1 : 0,
-                          duration: const Duration(seconds: 1),
-                          child: Icon(
-                            Icons.motion_photos_on_rounded,
-                            color: isMoving ? const Color(0xFF059669) : const Color(0xFF9CA3AF),
-                            size: 24,
+                      const SizedBox(height: 12),
+                      // Gas status indicator
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isMoving ? const Color(0xFFECFDF5) : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isMoving ? const Color(0xFF6EE7B7) : const Color(0xFFE5E7EB),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isMoving ? 'SEDANG BERGERAK' : 'BERHENTI',
-                                style: TextStyle(
-                                  color: isMoving ? const Color(0xFF059669) : const Color(0xFF6B7280),
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13,
-                                  letterSpacing: 0.4,
-                                ),
+                        child: Row(
+                          children: [
+                            AnimatedRotation(
+                              turns: isMoving ? 1 : 0,
+                              duration: const Duration(seconds: 1),
+                              child: Icon(
+                                Icons.motion_photos_on_rounded,
+                                color: isMoving ? const Color(0xFF059669) : const Color(0xFF9CA3AF),
+                                size: 24,
                               ),
-                              Text(
-                                isMoving ? 'Gas aktif — rollator sedang digunakan' : 'Gas tidak aktif',
-                                style: TextStyle(
-                                  color: isMoving ? const Color(0xFF059669).withOpacity(0.7) : const Color(0xFF9CA3AF),
-                                  fontSize: 11,
-                                ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isMoving ? 'SEDANG BERGERAK' : 'BERHENTI',
+                                    style: TextStyle(
+                                      color: isMoving ? const Color(0xFF059669) : const Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 13,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                  Text(
+                                    isMoving ? 'Gas aktif — rollator sedang digunakan' : 'Gas tidak aktif',
+                                    style: TextStyle(
+                                      color: isMoving ? const Color(0xFF059669).withOpacity(0.7) : const Color(0xFF9CA3AF),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                            if (isMoving) _PulseDot(),
+                          ],
                         ),
-                        // Pulse dot
-                        if (isMoving)
-                          _PulseDot(),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 10),
+                      // IMU status indicator
+                      _ImuStatusIndicator(imu: imu),
+                      const SizedBox(height: 14),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  _ModePill(title: 'Idle (Flat)', icon: Icons.pause_rounded, selected: selectedMode == 'idle'),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -1030,6 +1082,100 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
           color: Color(0xFF10B981),
           shape: BoxShape.circle,
         ),
+      ),
+    );
+  }
+}
+
+class _ImuStatusIndicator extends StatelessWidget {
+  const _ImuStatusIndicator({required this.imu});
+
+  final ImuData imu;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bgColor;
+    final Color borderColor;
+    final Color iconColor;
+    final Color textColor;
+    final Color subTextColor;
+    final IconData icon;
+    final String label;
+    final String sublabel;
+
+    switch (imu.status) {
+      case ImuStatus.jalan:
+        bgColor = const Color(0xFFEFF6FF);
+        borderColor = const Color(0xFF93C5FD);
+        iconColor = const Color(0xFF2563EB);
+        textColor = const Color(0xFF1E40AF);
+        subTextColor = const Color(0xFF3B82F6);
+        icon = Icons.directions_walk_rounded;
+        label = 'IMU — JALAN';
+        sublabel = imu.motionScore != null
+            ? 'Motion score: ${imu.motionScore!.toStringAsFixed(2)}'
+            : 'Sensor aktif — gerak terdeteksi';
+      case ImuStatus.diam:
+        bgColor = const Color(0xFFF9FAFB);
+        borderColor = const Color(0xFFE5E7EB);
+        iconColor = const Color(0xFF9CA3AF);
+        textColor = const Color(0xFF6B7280);
+        subTextColor = const Color(0xFF9CA3AF);
+        icon = Icons.accessibility_new_rounded;
+        label = 'IMU — DIAM';
+        sublabel = 'Sensor aktif — tidak ada gerakan';
+      case ImuStatus.offline:
+        bgColor = const Color(0xFFFFF7ED);
+        borderColor = const Color(0xFFFDBA74);
+        iconColor = const Color(0xFFEA580C);
+        textColor = const Color(0xFFC2410C);
+        subTextColor = const Color(0xFFEA580C);
+        icon = Icons.sensors_off_rounded;
+        label = 'IMU — OFFLINE';
+        sublabel = imu.connected
+            ? 'Sensor tidak merespons'
+            : 'Koneksi sensor terputus (I2C)';
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                Text(
+                  sublabel,
+                  style: TextStyle(
+                    color: subTextColor,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Pulse dot hanya saat jalan
+          if (imu.status == ImuStatus.jalan) _PulseDot(),
+        ],
       ),
     );
   }
