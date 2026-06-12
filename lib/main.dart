@@ -158,6 +158,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       TrackerPage(
         distanceRepository: widget.distanceRepository,
+        rollatorRepository: widget.rollatorRepository,
         colorScheme: colorScheme,
       ),
       AlertsPage(colorScheme: colorScheme, rollatorRepository: widget.rollatorRepository),
@@ -2361,7 +2362,9 @@ class _SimpleLineChartPainter extends CustomPainter {
 }
 
 class _TrackerSessionHistoryCard extends StatelessWidget {
-  const _TrackerSessionHistoryCard();
+  const _TrackerSessionHistoryCard({required this.rollatorRepository});
+
+  final RollatorRepository rollatorRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -2396,7 +2399,9 @@ class _TrackerSessionHistoryCard extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const SessionHistoryPage(),
+                        builder: (_) => SessionHistoryPage(
+                          rollatorRepository: rollatorRepository,
+                        ),
                       ),
                     );
                   },
@@ -2416,22 +2421,46 @@ class _TrackerSessionHistoryCard extends StatelessWidget {
             ),
           ),
           const Divider(height: 1),
-          const _SessionRow(
-            title: 'Afternoon Walk',
-            duration: '15 mins',
-            date: 'Oct 24 • 02:30 PM',
-          ),
-          const Divider(height: 1),
-          const _SessionRow(
-            title: 'Morning Rehab',
-            duration: '10 mins',
-            date: 'Oct 24 • 09:15 AM',
-          ),
-          const Divider(height: 1),
-          const _SessionRow(
-            title: 'Garden Stroll',
-            duration: '25 mins',
-            date: 'Oct 23 • 04:45 PM',
+          StreamBuilder<List<ImuHistoryEntry>>(
+            stream: rollatorRepository.watchImuHistory(_kSosDocumentId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final history = snapshot.data ?? [];
+              final sessions = _calculateSessions(history).take(3).toList();
+
+              if (sessions.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'Belum ada sesi berjalan',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (int i = 0; i < sessions.length; i++) ...[
+                    if (i > 0) const Divider(height: 1),
+                    _SessionRow(
+                      title: 'Sesi Berjalan',
+                      duration: sessions[i].durationLabel,
+                      date: sessions[i].dateLabel,
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
         ],
       ),

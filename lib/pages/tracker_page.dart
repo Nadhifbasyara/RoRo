@@ -1,9 +1,15 @@
 ﻿part of roro_main;
 
 class TrackerPage extends StatelessWidget {
-  const TrackerPage({super.key, required this.distanceRepository, required this.colorScheme});
+  const TrackerPage({
+    super.key,
+    required this.distanceRepository,
+    required this.rollatorRepository,
+    required this.colorScheme,
+  });
 
   final DistanceRepository distanceRepository;
+  final RollatorRepository rollatorRepository;
   final ColorScheme colorScheme;
 
   @override
@@ -46,7 +52,9 @@ class TrackerPage extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const SessionHistoryPage(),
+                      builder: (_) => SessionHistoryPage(
+                        rollatorRepository: rollatorRepository,
+                      ),
                     ),
                   );
                 },
@@ -83,7 +91,7 @@ class TrackerPage extends StatelessWidget {
               const SizedBox(height: 16),
               const _TrackerRehabScoreCard(),
               const SizedBox(height: 16),
-              const _TrackerSessionHistoryCard(),
+              _TrackerSessionHistoryCard(rollatorRepository: rollatorRepository),
               const SizedBox(height: 100),
             ],
           ),

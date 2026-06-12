@@ -20,7 +20,13 @@ abstract class RollatorRepository {
   Stream<ImuStatus> watchImuStatus(String rollatorCode);
   /// Stream data IMU lengkap dari dokumen rollator utama.
   Stream<ImuData> watchImuData(String rollatorCode);
-  /// Stream riwayat ository implements RollatorRepository {
+  /// Stream riwayat gas dari sub-collection 'gas', terbaru di atas.
+  Stream<List<GasHistoryEntry>> watchGasHistory(String rollatorCode);
+  /// Stream riwayat IMU dari sub-collection 'imuHistory', terbaru di atas.
+  Stream<List<ImuHistoryEntry>> watchImuHistory(String rollatorCode);
+}
+
+class DemoRollatorRepository implements RollatorRepository {
   const DemoRollatorRepository();
 
   @override
@@ -92,6 +98,10 @@ abstract class RollatorRepository {
   @override
   Stream<ImuData> watchImuData(String rollatorCode) =>
       Stream<ImuData>.value(ImuData.offline());
+
+  @override
+  Stream<List<ImuHistoryEntry>> watchImuHistory(String rollatorCode) =>
+      Stream<List<ImuHistoryEntry>>.value(const []);
 }
 
 class FirebaseRollatorRepository implements RollatorRepository {
@@ -347,6 +357,28 @@ class FirebaseRollatorRepository implements RollatorRepository {
       return ImuData.fromMap(data);
     });
   }
+
+  @override
+  Stream<List<ImuHistoryEntry>> watchImuHistory(String rollatorCode) {
+    final code = rollatorCode.trim();
+    if (code.isEmpty) return Stream<List<ImuHistoryEntry>>.value(const []);
+    return _rollators
+        .doc(code)
+        .collection('imuHistory')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((query) {
+      final entries = <ImuHistoryEntry>[];
+      for (final doc in query.docs) {
+        try {
+          entries.add(ImuHistoryEntry.fromMap(doc.data()));
+        } catch (_) {
+          // skip dokumen korup
+        }
+      }
+      return entries;
+    });
+  }
 }
 
 class RollatorRecord {
@@ -505,6 +537,41 @@ class ImuData {
       updatedAtMs: data['imuUpdatedAtMs'] is int
           ? data['imuUpdatedAtMs'] as int
           : null,
+    );
+  }
+}
+
+class ImuHistoryEntry {
+  const ImuHistoryEntry({
+    required this.status,
+    required this.walking,
+    required this.connected,
+    this.pitch,
+    this.roll,
+    this.motionScore,
+    this.timestamp,
+    this.deviceMillis,
+  });
+
+  final ImuStatus status;
+  final bool walking;
+  final bool connected;
+  final double? pitch;
+  final double? roll;
+  final double? motionScore;
+  final DateTime? timestamp;
+  final int? deviceMillis;
+
+  factory ImuHistoryEntry.fromMap(Map<String, dynamic> map) {
+    return ImuHistoryEntry(
+      status: _parseImuStatus(map['status']),
+      walking: map['walking'] == true,
+      connected: map['connected'] == true,
+      pitch: (map['pitch'] as num?)?.toDouble(),
+      roll: (map['roll'] as num?)?.toDouble(),
+      motionScore: (map['motionScore'] as num?)?.toDouble(),
+      timestamp: RollatorRecord._timestampToDateTime(map['timestamp']),
+      deviceMillis: (map['deviceMillis'] as num?)?.toInt(),
     );
   }
 }
